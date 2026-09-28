@@ -89,11 +89,11 @@ class General(commands.Cog):
         embed = discord.Embed(
             title=f"Instance owned by `{f'Team {app_info.team.name}' if app_info.team else app_info.owner}`",
             description=(
-                "This is a custom instance of **Kepler**, based on [Martin](https://github.com/NoobInDaHause/Martin), "
+                "This is a custom instance of **Kepler**, based on [Kepler](https://github.com/NoobInDaHause/Kepler), "
                 "an open-source Discord ~~BOT~~ APP built with [Python](https://www.python.org/) & "
                 "[discord.py](https://pypi.org/project/discord.py/).\n\n"
-                "• **Source:** [GitHub](https://github.com/NoobInDaHause/Martin)\n"
-                "• **License:** [MIT](https://github.com/NoobInDaHause/Martin/blob/master/LICENSE)\n"
+                "• **Source:** [GitHub](https://github.com/NoobInDaHause/Kepler)\n"
+                "• **License:** [MIT](https://github.com/NoobInDaHause/Kepler/blob/master/LICENSE)\n"
                 "• **Community:** [Discord Server](https://discord.com/invite/8vPBQ3UJQQ)\n\n"
                 "Want your own copy? Check out the repo to host one yourself!"
             ),
