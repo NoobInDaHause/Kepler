@@ -1,0 +1,53 @@
+name: Build Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: make install-dependencies
+
+      - name: Create release package
+        run: |
+          mkdir release_build
+
+          cp -r cogs release_build/
+          cp -r keplerbot release_build/
+          cp -r utilities release_build/
+          cp -r cogs_data release_build/
+          cp main.py release_build/
+          cp requirements.txt release_build/
+          cp version.txt release_build/
+          cp README.md release_build/
+          cp LICENSE release_build/
+          cp start_bot.bat release_build/
+          cp start_bot.sh release_build/
+          cp config.json.example release_build/
+          cp .env.example release_build/
+
+          cd release_build
+          zip -r "../Kepler-${{ github.event.release.tag_name }}.zip" .
+
+      - name: Upload release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload \
+            "${{ github.event.release.tag_name }}" \
+            "Kepler-${{ github.event.release.tag_name }}.zip"

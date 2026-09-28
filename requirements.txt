@@ -1,0 +1,5 @@
+discord.py[voice]
+aiosqlite
+aiohttp
+packaging
+python-dotenv
