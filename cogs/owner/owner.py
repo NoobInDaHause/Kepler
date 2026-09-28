@@ -167,7 +167,7 @@ class Owner(commands.Cog):
         loaded = [
             cog_name
             for cog_name in cog_names
-                if f"cogs.{cog_name}" in self.bot.extensions
+            if f"cogs.{cog_name}" in self.bot.extensions
         ]
         unloaded = [cog_name for cog_name in cog_names if cog_name not in loaded]
 
