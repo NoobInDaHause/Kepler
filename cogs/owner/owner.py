@@ -38,6 +38,7 @@ class Owner(commands.Cog):
     async def manage_cog(self, action: str, cog_name: str) -> Tuple[bool, str]:
         extension = f"cogs.{cog_name}"
         try:
+            existing_cogs = dict(self.bot.cogs)
             if action == "load":
                 await self.bot.load_extension(extension)
             elif action == "unload":
@@ -46,7 +47,11 @@ class Owner(commands.Cog):
                 await self.bot.reload_extension(extension)
 
             if action != "unload":
-                cog_class_names: List[str] = list(self.bot.extensions[extension].cogs)
+                cog_class_names = [
+                    class_name
+                    for class_name, cog in self.bot.cogs.items()
+                    if existing_cogs.get(class_name) is not cog
+                ]
                 if all(
                     class_name.casefold() != cog_name.casefold()
                     for class_name in cog_class_names
