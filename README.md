@@ -96,7 +96,7 @@ The startup scripts are the **recommended way to start Kepler**.
 
 ---
 
-## Hosting Kepler
+## 🖥️ Hosting Kepler
 
 Kepler needs Python 3.10 or newer and a reliable internet connection. It connects to Discord over an outbound connection, so you do not need to open or forward inbound ports. Keep the project directory writable: Kepler stores its SQLite databases in `cogs_data/` and writes `logs.log` in the project directory.
 
@@ -139,7 +139,7 @@ ExecStart=bash start_bot.sh
 WantedBy=multi-user.target
 ```
 
-Make sure the `kepler` account can read the project and write to it, then enable and start the service:
+Make sure the `kepler` account can read the project and write to it, replace the enclosed with `<>`and then enable and start the service:
 
 ```bash
 sudo systemctl daemon-reload
