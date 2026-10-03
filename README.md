@@ -139,7 +139,7 @@ ExecStart=bash start_bot.sh
 WantedBy=multi-user.target
 ```
 
-Make sure the `kepler` account can read the project and write to it, replace the enclosed with `<>`and then enable and start the service:
+Make sure the `kepler` account can read the project and write to it, replace the enclosed with `<>` and then enable and start the service:
 
 ```bash
 sudo systemctl daemon-reload
