@@ -52,9 +52,10 @@ class Owner(commands.Cog):
                     for class_name in cog_class_names
                 ):
                     await self.bot.unload_extension(extension)
-                    actual_names = discord.utils._human_join(
-                        cog_class_names, final="and"
-                    ) or "none"
+                    actual_names = (
+                        discord.utils._human_join(cog_class_names, final="and")
+                        or "none"
+                    )
                     return (
                         False,
                         f"cog class name must match folder name "
@@ -182,9 +183,7 @@ class Owner(commands.Cog):
             for cog_folder in cogs_path.iterdir()
             if cog_folder.is_dir() and (cog_folder / "__init__.py").is_file()
         )
-        loaded_extensions = {
-            extension.casefold() for extension in self.bot.extensions
-        }
+        loaded_extensions = {extension.casefold() for extension in self.bot.extensions}
         loaded = [
             cog_name
             for cog_name in cog_names

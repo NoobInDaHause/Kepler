@@ -137,7 +137,7 @@ class Kepler(commands.AutoShardedBot):
                         "Cog class name must match folder name case sensitivity does not matter for the folder name. "
                         "Expected: %s, Got: %s",
                         folder_name,
-                        last_cog
+                        last_cog,
                     )
                     await self.unload_extension(f"cogs.{folder_name}")
 
