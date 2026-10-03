@@ -96,6 +96,69 @@ The startup scripts are the **recommended way to start Kepler**.
 
 ---
 
+## Hosting Kepler
+
+Kepler needs Python 3.10 or newer and a reliable internet connection. It connects to Discord over an outbound connection, so you do not need to open or forward inbound ports. Keep the project directory writable: Kepler stores its SQLite databases in `cogs_data/` and writes `logs.log` in the project directory.
+
+For a continuously available bot, use an always-on Windows or Linux VM. A personal computer works too, but Kepler is offline whenever the device is off, asleep, or disconnected from the internet.
+
+### Disclaimer
+
+Kepler can be hosted with pterodactyl or anything similar but I will not provide support for you if you wish to do so.
+It is recommended that you use linux for hosting kepler though you would require a bit of linux knowledge but the internet is always around for you to search things up.
+
+### Windows
+
+Run `start_bot.bat` from the project. It creates a virtual environment and installs the required packages the first time it runs. On a Windows VM, you can use Task Scheduler to start the bot at startup or user logon; set **Start in** to the Kepler project directory.
+
+The batch script pauses after Kepler exits, and only automatically restarts it for its designated restart code. For unattended recovery from other exits, use a Windows service manager configured to restart the bot, or restart it manually after checking `logs.log`.
+
+### Linux VM
+
+Run `bash start_bot.sh` from the project directory to start Kepler. For automatic startup and for the restart command to work and recovery on a VM with `systemd`, create a service file at `/etc/systemd/system/kepler.service`:
+
+```bash
+sudo nano /etc/systemd/system/kepler.service
+```
+
+Then paste this code:
+
+```ini
+[Unit]
+Description=Kepler Discord bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=<YOUR_LINUX_USERNAME>
+WorkingDirectory=<THE_PATH_TO_YOUR_BOT>
+ExecStart=bash start_bot.sh
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Make sure the `kepler` account can read the project and write to it, then enable and start the service:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable kepler
+sudo systemctl start kepler
+```
+
+View service output with `sudo journalctl -u kepler -f`. The startup script handles Kepler's designated restart code; `systemd` restarts the service if it exits with an error.
+
+### Personal devices
+
+Use the platform's startup script as above. Keep the device awake and connected to the internet while you want the bot online; laptops and phones may suspend background work or disconnect on battery or mobile networks. This is suitable for testing or light use, but less reliable than an always-on VM.
+
+### Updates and backups
+
+Keep `.env` private and restrict access to it; it contains the bot token. Back up `config.json` and `cogs_data/` regularly, preferably while Kepler is stopped. Before updating the code or dependencies, stop Kepler and make a backup so you can restore its configuration and database files if needed.
+
+---
+
 ## ✨ Features
 
 * ⚡ Slash commands

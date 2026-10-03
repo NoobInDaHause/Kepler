@@ -44,6 +44,22 @@ class Owner(commands.Cog):
                 await self.bot.unload_extension(extension)
             else:
                 await self.bot.reload_extension(extension)
+
+            if action != "unload":
+                cog_class_names: List[str] = list(self.bot.extensions[extension].cogs)
+                if all(
+                    class_name.casefold() != cog_name.casefold()
+                    for class_name in cog_class_names
+                ):
+                    await self.bot.unload_extension(extension)
+                    actual_names = discord.utils._human_join(
+                        cog_class_names, final="and"
+                    ) or "none"
+                    return (
+                        False,
+                        f"cog class name must match folder name "
+                        f"(expected {cog_name}, got {actual_names})",
+                    )
         except commands.ExtensionNotFound:
             return False, "extension not found"
         except commands.ExtensionAlreadyLoaded:
@@ -58,24 +74,26 @@ class Owner(commands.Cog):
     async def manage_cogs(
         self, interaction: KeplerInteraction, action: str, cog_names: List[str]
     ) -> None:
-        protected = [
-            cog_name for cog_name in cog_names if cog_name.casefold() == "owner"
-        ]
-        missing = [cog_name for cog_name in cog_names if not self.cog_exists(cog_name)]
-        existing = [
-            cog_name
-            for cog_name in cog_names
-            if cog_name not in missing and cog_name not in protected
-        ]
-        results = [
-            (cog_name, await self.manage_cog(action, cog_name)) for cog_name in existing
-        ]
-        successful = [cog_name for cog_name, (succeeded, _) in results if succeeded]
-        failed = [
-            (cog_name, reason)
-            for cog_name, (succeeded, reason) in results
-            if not succeeded
-        ]
+        protected = []
+        missing = []
+        successful = []
+        failed = []
+
+        for cog_name in cog_names:
+            if cog_name.casefold() == "owner":
+                protected.append(cog_name)
+                continue
+
+            if not self.cog_exists(cog_name):
+                missing.append(cog_name)
+                continue
+
+            succeeded, reason = await self.manage_cog(action, cog_name)
+            if succeeded:
+                successful.append(cog_name)
+            else:
+                failed.append((cog_name, reason))
+
         messages = []
         verb = f"{action}ed"
         if successful:
@@ -158,16 +176,19 @@ class Owner(commands.Cog):
             await PaginatorView(interaction, embeds).start()
 
     async def _cog_list(self, interaction: KeplerInteraction) -> None:
-        cogs_path = Path(__file__).parents[2]
+        cogs_path = Path(__file__).parents[2] / "cogs"
         cog_names = sorted(
             cog_folder.name
             for cog_folder in cogs_path.iterdir()
             if cog_folder.is_dir() and (cog_folder / "__init__.py").is_file()
         )
+        loaded_extensions = {
+            extension.casefold() for extension in self.bot.extensions
+        }
         loaded = [
             cog_name
             for cog_name in cog_names
-            if f"cogs.{cog_name}" in self.bot.extensions
+            if f"cogs.{cog_name}".casefold() in loaded_extensions
         ]
         unloaded = [cog_name for cog_name in cog_names if cog_name not in loaded]
 

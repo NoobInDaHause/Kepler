@@ -122,14 +122,24 @@ class Kepler(commands.AutoShardedBot):
         cogs_path = Path(__file__).parents[1] / "cogs"
         for cog_folder in cogs_path.iterdir():
             if cog_folder.is_dir() and (cog_folder / "__init__.py").is_file():
+                folder_name = cog_folder.name
                 try:
-                    await self.load_extension(f"cogs.{cog_folder.name}")
+                    await self.load_extension(f"cogs.{folder_name}")
                 except commands.ExtensionFailed as e:
                     self.log.exception(
                         "Error loading cog: %s",
-                        cog_folder.name,
+                        folder_name,
                         exc_info=(type(e), e, e.__traceback__),
                     )
+                last_cog = list(self.cogs.keys())[-1]
+                if folder_name.lower() != last_cog.lower():
+                    self.log.warning(
+                        "Cog class name must match folder name case sensitivity does not matter for the folder name. "
+                        "Expected: %s, Got: %s",
+                        folder_name,
+                        last_cog
+                    )
+                    await self.unload_extension(f"cogs.{folder_name}")
 
         if cog_names := list(self.cogs):
             plural = "s" if len(cog_names) > 1 else ""
