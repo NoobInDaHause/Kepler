@@ -133,7 +133,10 @@ Wants=network-online.target
 Type=simple
 User=<YOUR_LINUX_USERNAME>
 WorkingDirectory=<THE_PATH_TO_YOUR_BOT>
+
 ExecStart=bash start_bot.sh
+
+Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=multi-user.target
