@@ -41,6 +41,24 @@ async def run_bot() -> int:
                 "Error logging in. Might have wrong token please double check.",
                 exc_info=(type(L), L, L.__traceback__),
             )
+        except discord.errors.DiscordServerError as D:
+            bot.log.critical(
+                "Discord server error. Aborting startup. Retrying in 2 minutes.",
+                exc_info=(type(D), D, D.__traceback__),
+            )
+            await asyncio.sleep(120)
+            try:
+                await bot.start(token=os.getenv("TOKEN"))
+            except discord.errors.LoginFailure as LL:
+                bot.log.critical(
+                    "Error logging in. Might have wrong token please double check.",
+                    exc_info=(type(LL), LL, LL.__traceback__),
+                )
+            except discord.errors.DiscordServerError as DD:
+                bot.log.critical(
+                    "Discord server error. Aborting startup. Please try again later.",
+                    exc_info=(type(DD), DD, DD.__traceback__),
+                )
 
         return bot.exit_code
 

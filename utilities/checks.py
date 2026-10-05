@@ -226,7 +226,7 @@ def has_role(item: Union[int, str], /) -> Callable[[T], T]:
 
     async def predicate(interaction: KeplerInteraction) -> bool:
         if isinstance(interaction.user, discord.User):
-            raise NoPrivateMessage()
+            raise NoPrivateMessage("This command cannot be used in private messages.")
 
         # always return true if owner
         if await interaction.client.is_owner(interaction.user):
@@ -281,7 +281,7 @@ def has_any_role(*items: Union[int, str]) -> Callable[[T], T]:
 
     async def predicate(interaction: KeplerInteraction) -> bool:
         if isinstance(interaction.user, discord.User):
-            raise NoPrivateMessage()
+            raise NoPrivateMessage("This command cannot be used in private messages.")
 
         # always return true if owner
         if await interaction.client.is_owner(interaction.user):
