@@ -3,7 +3,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Union, cast, Optional
+from typing import Dict, List, Optional, Union, cast
 
 import aiohttp
 import discord
