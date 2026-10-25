@@ -3,7 +3,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Union, cast
+from typing import Dict, List, Union, cast, Optional
 
 import aiohttp
 import discord
@@ -27,6 +27,8 @@ class Kepler(commands.AutoShardedBot):
     """
 
     __version__ = (PROJECT_ROOT / "version.txt").read_text(encoding="utf-8").strip()
+    uptime = datetime.now(timezone.utc)
+    log = logging.getLogger("Kepler")
 
     def __init__(self, settings: Settings):
         super().__init__(
@@ -37,9 +39,7 @@ class Kepler(commands.AutoShardedBot):
         )
         self.blacklisted_user_ids = settings.blacklisted_user_ids
         self.global_hex_colour = settings.global_hex_colour
-        self.uptime = datetime.now(timezone.utc)
         self.custom_info = settings.custom_info
-        self.log = logging.getLogger("Kepler")
         self.exit_code = 0
 
     @property
@@ -47,8 +47,15 @@ class Kepler(commands.AutoShardedBot):
         return discord.Colour.from_str(self.global_hex_colour)
 
     @property
-    def color(self) -> discord.Colour:
+    def color(self) -> discord.Color:
         return self.colour
+
+    async def on_command_error(
+        self, ctx: commands.Context, error: commands.CommandError
+    ) -> Optional[commands.CommandError]:
+        if isinstance(error, commands.CommandNotFound):
+            return
+        return await super().on_command_error(ctx, error)
 
     async def get_updates(self) -> Dict[str, str]:
         """Get the latest GitHub version and compare it with the bot version."""
