@@ -58,7 +58,7 @@ class LevelingDataBase(DataManager):
             "SELECT min_exp, max_exp, rate, cooldown, threshold_multiplier, level_threshold FROM guilds WHERE guild_id = ?",
             (guild_id,),
             select=True,
-            one_all="all",
+            one_all="one",
         )
 
         return {
@@ -75,7 +75,7 @@ class LevelingDataBase(DataManager):
             "SELECT exp, level FROM members WHERE guild_id = ? AND member_id = ?",
             (guild_id, member_id),
             select=True,
-            one_all="all",
+            one_all="one",
         )
 
         return {"exp": result[0], "level": result[1]}
