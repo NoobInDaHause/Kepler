@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from keplerbot import Kepler, KeplerInteraction
-from utilities.checks import cooldown, bot_has_permissions
+from utilities.checks import bot_has_permissions, cooldown
 
 from .leveling_data_manager import LevelingDataBase
 
