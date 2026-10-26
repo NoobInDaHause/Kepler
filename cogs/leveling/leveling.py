@@ -5,11 +5,12 @@ from typing import Dict
 import discord
 from discord import app_commands
 from discord.ext import commands
+from leveling_data_manager import LevelingDataBase
 
 from keplerbot import Kepler, KeplerInteraction
 from utilities.checks import bot_has_permissions, has_permissions
 
-from .leveling_data_manager import LevelingDataBase
+from leveling_data_manager import LevelingDataBase
 
 
 class Leveling(commands.Cog):
