@@ -98,7 +98,7 @@ class Leveling(commands.Cog):
 
             while threshold > 0 and now_exp >= threshold:
                 now_exp -= threshold
-                now_level += 1
+                now_level = now_level + 1
                 threshold = math.ceil(
                     guild_exp_data["level_threshold"]
                     * (guild_exp_data["threshold_multiplier"] ** now_level)
