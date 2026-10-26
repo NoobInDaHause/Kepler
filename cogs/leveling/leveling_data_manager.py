@@ -88,7 +88,7 @@ class LevelingDataBase(DataManager):
             INSERT INTO members (guild_id, member_id, exp, level)
             VALUES (?, ?, ?, ?)
             ON CONFLICT (guild_id, member_id)
-            DO UPDATE SET exp = members.exp + excluded.exp, level = excluded.level
+            DO UPDATE SET exp = excluded.exp, level = excluded.level
             """,
             (guild_id, member_id, exp, level),
         )
