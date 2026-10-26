@@ -34,7 +34,7 @@ class Kepler(commands.AutoShardedBot):
         super().__init__(
             command_prefix=commands.when_mentioned,
             intents=INTENTS,
-            description="A Discord bot/app written in Python.",
+            description="A Discord ~~BOT~~ APP written in Python.",
             tree_cls=KeplerTree,
         )
         self.blacklisted_user_ids = settings.blacklisted_user_ids
@@ -63,7 +63,6 @@ class Kepler(commands.AutoShardedBot):
             f"https://api.github.com/repos/{GITHUB_REPOSITORY}/releases/latest"
         )
         latest_version = ""
-        release_url = releases_url
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -121,7 +120,6 @@ class Kepler(commands.AutoShardedBot):
         }
 
     async def setup_hook(self) -> None:
-        await super().setup_hook()
         app_info = await self.application_info()
         members = app_info.team.members if app_info.team else [app_info.owner]
         self.owner_ids = {member.id for member in members}
