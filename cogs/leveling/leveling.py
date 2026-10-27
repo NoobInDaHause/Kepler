@@ -297,3 +297,37 @@ class Leveling(commands.Cog):
         await interaction.response_or_followup(
             f"Experience range has been set to {min_exp} - {max_exp}."
         )
+
+    @leveling_settings.command(
+        name="setcooldown", description="Set the cooldown for gaining experience."
+    )
+    @has_permissions(manage_guild=True)
+    @app_commands.describe(
+        rate="The number of messages a member can send before the cooldown is applied. (default: 1)",
+        cooldown="The cooldown in seconds before a member can gain experience again. (default: 30)",
+    )
+    async def leveling_settings_setcooldown(
+        self, interaction: KeplerInteraction, rate: int = 1, cooldown: int = 30
+    ) -> None:
+        guild_id = interaction.guild.id
+
+        await self.db.initialize_guild_or_member(True, (guild_id,))
+
+        if cooldown < 0 or rate < 0:
+            return await interaction.response_or_followup(
+                "Invalid cooldown or rate. Ensure that both values are non-negative."
+            )
+
+        await self.db.execute(
+            """
+            INSERT INTO guilds (guild_id, rate, cooldown)
+            VALUES (?, ?, ?)
+            ON CONFLICT (guild_id)
+            DO UPDATE SET rate = excluded.rate, cooldown = excluded.cooldown
+            """,
+            (guild_id, rate, cooldown),
+        )
+
+        await interaction.response_or_followup(
+            f"Cooldown for gaining experience has been set to {rate} time per {cooldown} seconds."
+        )
