@@ -32,6 +32,12 @@ class Leveling(commands.Cog):
         self.db = LevelingDataBase(self.__class__.__name__)
         self.cooldowns: Dict[int, commands.CooldownMapping] = {}
 
+    @staticmethod
+    def make_progress_bar(exp: int, threshold: int, length: int = 12) -> str:
+        progress = min(exp / threshold, 1.0)
+        filled = int(progress * length)
+        return f"{'█' * filled}{'░' * (length - filled)} {exp / threshold:.1%}"
+
     async def cog_load(self) -> None:
         await self.db.initialize()
 
@@ -86,7 +92,7 @@ class Leveling(commands.Cog):
 
         await self.db.initialize_guild_or_member(False, (guild_id, member_id))
 
-        guild_exp_data = await self.db.get_guild_exp_data(guild_id)
+        guild_exp_data = await self.db.get_guild_data(guild_id)
 
         if (
             not self.cooldowns.setdefault(
@@ -134,13 +140,13 @@ class Leveling(commands.Cog):
                 await self.announce_levelup(message, old_level, now_level)
 
     @app_commands.command(
-        name="level", description="Check your or other member level and experience."
+        name="rank", description="Check your or other member level and experience."
     )
     @app_commands.guild_only()
     @bot_has_permissions(embed_links=True)
     @cooldown(1, 5, key=lambda interaction: (interaction.guild_id, interaction.user.id))
     @app_commands.describe(member="The member to check the level of.")
-    async def level(
+    async def rank(
         self, interaction: KeplerInteraction, member: discord.Member = None
     ) -> None:
         member = member or interaction.user
@@ -169,21 +175,25 @@ class Leveling(commands.Cog):
         await self.db.initialize_guild_or_member(False, (guild_id, member_id))
 
         member_data = await self.db.get_member_data(guild_id, member_id)
-        guild_exp_data = await self.db.get_guild_exp_data(guild_id)
+        guild_exp_data = await self.db.get_guild_data(guild_id)
 
         threshold = math.ceil(
             guild_exp_data["level_threshold"]
             * (guild_exp_data["threshold_multiplier"] ** member_data["level"])
         )
 
+        exp = member_data["exp"]
+
         embed = discord.Embed(
             title=f"{member.name}'s Level",
-            description=f"Level: {member_data['level']}\nExperience: {member_data['exp']}/{threshold}",
+            description=f"Level: {member_data['level']}\nExperience: {exp}/{threshold}\n"
+            f"{self.make_progress_bar(exp, threshold)}",
             color=member.colour,
         )
 
         await interaction.response_or_followup(embed=embed)
 
+    # ------------------------------ Settings ----------------------------------------
     leveling_settings = LevelingSettings()
 
     @leveling_settings.command(
@@ -381,3 +391,42 @@ class Leveling(commands.Cog):
         await interaction.response_or_followup(
             f"The base exp has been set to {base_exp} and will be multiplied by {multiplier} per level."
         )
+
+    @leveling_settings.command(
+        name="viewsettings", description="View your guild leveling settings."
+    )
+    @has_permissions(manage_guild=True)
+    @bot_has_permissions(embed_links=True)
+    async def leveling_settings_viewsettings(
+        self, interaction: KeplerInteraction
+    ) -> None:
+        guild_id = interaction.guild.id
+
+        await self.db.initialize_guild_or_member(True, (guild_id,))
+
+        guild_data = await self.db.get_guild_data(guild_id)
+
+        desc = (
+            f"Enabled: {bool(guild_data['enabled'])}\n"
+            f"Minimum exp per message: {guild_data['min_exp']}\n"
+            f"Maximum exp per message: {guild_data['max_exp']}\n"
+            f"Message cooldown: {guild_data['rate']} per {guild_data['cooldown']} seconds.\n"
+            f"Level threshold: base {guild_data['level_threshold']}, multiplier {guild_data['multiplier']}\n"
+            "Levelup announcement channel: "
+        )
+
+        desc += (
+            (interaction.guild.get_channel(guild_data["levelup_channel"])).mention
+            if guild_data["levelup_channel"]
+            else "None"
+        )
+
+        embed = discord.Embed(
+            title=f"Leveling settings for {interaction.guild}",
+            description=desc,
+            colour=self.bot.colour,
+            timestamp=discord.utils.utcnow(),
+        )
+        embed.set_thumbnail(url=interaction.guild.icon)
+
+        await interaction.response_or_followup(embed=embed)

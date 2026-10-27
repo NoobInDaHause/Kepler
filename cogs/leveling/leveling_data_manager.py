@@ -62,21 +62,23 @@ class LevelingDataBase(DataManager):
                 (_id[0], _id[1]),
             )
 
-    async def get_guild_exp_data(self, guild_id: int) -> Dict[str, Union[int, float]]:
+    async def get_guild_data(self, guild_id: int) -> Dict[str, Union[int, float]]:
         result = await self.execute(
-            "SELECT min_exp, max_exp, rate, cooldown, threshold_multiplier, level_threshold FROM guilds WHERE guild_id = ?",
+            "SELECT * FROM guilds WHERE guild_id = ?",
             (guild_id,),
             select=True,
-            one_all="one",
+            one_all="all",
         )
 
         return {
-            "min_exp": result[0],
-            "max_exp": result[1],
-            "rate": result[2],
-            "cooldown": result[3],
-            "threshold_multiplier": result[4],
-            "level_threshold": result[5],
+            "enabled": result[0],
+            "min_exp": result[1],
+            "max_exp": result[2],
+            "rate": result[3],
+            "cooldown": result[4],
+            "threshold_multiplier": result[5],
+            "level_threshold": result[6],
+            "levelup_channel": result[7],
         }
 
     async def get_member_data(self, guild_id: int, member_id: int) -> Dict[str, int]:
