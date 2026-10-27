@@ -67,7 +67,7 @@ class LevelingDataBase(DataManager):
             "SELECT * FROM guilds WHERE guild_id = ?",
             (guild_id,),
             select=True,
-            one_all="all",
+            one_all="one",
         )
 
         return {
