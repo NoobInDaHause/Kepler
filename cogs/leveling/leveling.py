@@ -14,7 +14,6 @@ from .leveling_data_manager import LevelingDataBase
 
 
 @app_commands.guild_only()
-@has_permissions(manage_guild=True)
 class LevelingSettings(app_commands.Group):
     def __init__(self):
         super().__init__(
@@ -134,7 +133,7 @@ class Leveling(commands.Cog):
     @app_commands.guild_only()
     @bot_has_permissions(embed_links=True)
     @cooldown(
-        1, 10, key=lambda interaction: (interaction.guild_id, interaction.user.id)
+        1, 5, key=lambda interaction: (interaction.guild_id, interaction.user.id)
     )
     async def level(
         self, interaction: KeplerInteraction, member: discord.Member = None
@@ -185,6 +184,7 @@ class Leveling(commands.Cog):
     @leveling_settings.command(
         name="enable", description="Enable or disable leveling system for this guild."
     )
+    @has_permissions(manage_guild=True)
     async def levelingsettings_enable(self, interaction: KeplerInteraction) -> None:
         guild_id = interaction.guild.id
 
@@ -216,6 +216,7 @@ class Leveling(commands.Cog):
         name="levelupchannel",
         description="Set or remove the level up announcement channel.",
     )
+    @has_permissions(manage_guild=True)
     async def levelingsettings_levelupchannel(
         self, interaction: KeplerInteraction, channel: discord.TextChannel = None
     ) -> None:
