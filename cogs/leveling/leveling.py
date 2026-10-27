@@ -1,7 +1,7 @@
 import contextlib
 import math
 import random
-from typing import Dict
+from typing import Dict, Literal
 
 import discord
 from discord import app_commands
@@ -47,6 +47,10 @@ class Leveling(commands.Cog):
 
         return f"{bar} {progress:.2%}"
 
+    @staticmethod
+    def threshold_for_level(level: int, base_exp: int, multiplier: float) -> int:
+        return max(1, math.ceil(base_exp * (multiplier**level)))
+
     async def cog_load(self) -> None:
         await self.db.initialize()
 
@@ -61,11 +65,7 @@ class Leveling(commands.Cog):
             one_all="one",
         )
 
-        channel = (
-            message.guild.get_channel(levelup_channel_id[0])
-            if levelup_channel_id[0] is not None
-            else message.channel
-        )
+        channel = message.guild.get_channel(levelup_channel_id[0]) or message.channel
 
         with contextlib.suppress(discord.errors.Forbidden):
             embed = discord.Embed(
@@ -122,17 +122,19 @@ class Leveling(commands.Cog):
             old_level = member_data["level"]
             now_level = old_level
 
-            threshold = math.ceil(
-                guild_exp_data["level_threshold"]
-                * (guild_exp_data["threshold_multiplier"] ** member_data["level"])
+            threshold = self.threshold_for_level(
+                now_level,
+                guild_exp_data["level_threshold"],
+                guild_exp_data["threshold_multiplier"],
             )
 
             while now_exp >= threshold:
                 now_exp -= threshold
                 now_level = now_level + 1
-                threshold = math.ceil(
-                    guild_exp_data["level_threshold"]
-                    * (guild_exp_data["threshold_multiplier"] ** now_level)
+                threshold = self.threshold_for_level(
+                    now_level,
+                    guild_exp_data["level_threshold"],
+                    guild_exp_data["threshold_multiplier"],
                 )
 
             await self.db.execute(
@@ -186,9 +188,10 @@ class Leveling(commands.Cog):
         member_data = await self.db.get_member_data(guild_id, member_id)
         guild_exp_data = await self.db.get_guild_data(guild_id)
 
-        threshold = math.ceil(
-            guild_exp_data["level_threshold"]
-            * (guild_exp_data["threshold_multiplier"] ** member_data["level"])
+        threshold = self.threshold_for_level(
+            member_data["level"],
+            guild_exp_data["level_threshold"],
+            guild_exp_data["threshold_multiplier"],
         )
 
         exp = member_data["exp"]
@@ -381,10 +384,10 @@ class Leveling(commands.Cog):
 
         await self.db.initialize_guild_or_member(True, (guild_id,))
 
-        if base_exp < 0 or multiplier < 1.01:
+        if base_exp < 1 or multiplier < 0:
             return await interaction.response_or_followup(
-                "Invalid base exp or multiplier. Ensure that both values are non-negative and/or "
-                "multiplier should not be lower than 1.01."
+                "Invalid base exp or multiplier. Ensure that base exp is not less than 1 and "
+                "multiplier should not be lower than 0."
             )
 
         await self.db.execute(
@@ -439,3 +442,103 @@ class Leveling(commands.Cog):
         embed.set_thumbnail(url=interaction.guild.icon)
 
         await interaction.response_or_followup(embed=embed)
+
+    @app_commands.command(
+        name="levelexp",
+        description="Add or remove experience from a member.",
+    )
+    @app_commands.guild_only()
+    @has_permissions(manage_guild=True)
+    @app_commands.describe(
+        act="Add or remove experience from a member.",
+        member="The target member.",
+        exp="The amount of experience to add or remove.",
+    )
+    async def levelexp(
+        self,
+        interaction: KeplerInteraction,
+        act: Literal["add", "remove"],
+        member: discord.Member,
+        exp: int,
+    ) -> None:
+        guild_id = interaction.guild.id
+        member_id = member.id
+
+        await self.db.initialize_guild_or_member(True, (guild_id,))
+        await self.db.initialize_guild_or_member(False, (guild_id, member_id))
+
+        guild_exp_data = await self.db.get_guild_data(guild_id)
+        member_data = await self.db.get_member_data(guild_id, member_id)
+
+        if exp < 0:
+            return await interaction.response_or_followup(
+                "Experience amount must be non-negative."
+            )
+
+        old_level = member_data["level"]
+        new_level = old_level
+        new_exp = member_data["exp"]
+
+        if act == "add":
+            new_exp += exp
+            threshold = self.threshold_for_level(
+                new_level,
+                guild_exp_data["level_threshold"],
+                guild_exp_data["threshold_multiplier"],
+            )
+            while new_exp >= threshold:
+                new_exp -= threshold
+                new_level += 1
+                threshold = self.threshold_for_level(
+                    new_level,
+                    guild_exp_data["level_threshold"],
+                    guild_exp_data["threshold_multiplier"],
+                )
+        else:
+            exp_remaining = exp
+            if exp_remaining <= new_exp:
+                new_exp -= exp_remaining
+                exp_remaining = 0
+            else:
+                exp_remaining -= new_exp
+                new_exp = 0
+
+                while exp_remaining > 0 and new_level > 0:
+                    new_level -= 1
+                    threshold = self.threshold_for_level(
+                        new_level,
+                        guild_exp_data["level_threshold"],
+                        guild_exp_data["threshold_multiplier"],
+                    )
+                    if exp_remaining < threshold:
+                        new_exp = threshold - exp_remaining
+                        exp_remaining = 0
+                    else:
+                        exp_remaining -= threshold
+
+        await self.db.execute(
+            """
+            INSERT INTO members (guild_id, member_id, exp, level)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT (guild_id, member_id)
+            DO UPDATE SET exp = excluded.exp, level = excluded.level
+            """,
+            (guild_id, member_id, new_exp, new_level),
+        )
+
+        threshold = self.threshold_for_level(
+            new_level,
+            guild_exp_data["level_threshold"],
+            guild_exp_data["threshold_multiplier"],
+        )
+        if act == "add":
+            response = f"Added {exp} XP to {member.mention}."
+        else:
+            removed_exp = exp - exp_remaining
+            response = f"Removed {removed_exp} XP from {member.mention}."
+
+        response += (
+            f" They are now level {new_level} with {new_exp}/{threshold} XP "
+            "toward the next level."
+        )
+        await interaction.response_or_followup(response)
