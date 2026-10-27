@@ -132,9 +132,7 @@ class Leveling(commands.Cog):
     )
     @app_commands.guild_only()
     @bot_has_permissions(embed_links=True)
-    @cooldown(
-        1, 5, key=lambda interaction: (interaction.guild_id, interaction.user.id)
-    )
+    @cooldown(1, 5, key=lambda interaction: (interaction.guild_id, interaction.user.id))
     async def level(
         self, interaction: KeplerInteraction, member: discord.Member = None
     ) -> None:
