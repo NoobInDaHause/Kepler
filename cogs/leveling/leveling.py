@@ -532,13 +532,13 @@ class Leveling(commands.Cog):
             guild_exp_data["threshold_multiplier"],
         )
         if act == "add":
-            response = f"Added {exp} XP to {member.mention}."
+            response = f"Added {exp} EXP to {member.mention}."
         else:
             removed_exp = exp - exp_remaining
-            response = f"Removed {removed_exp} XP from {member.mention}."
+            response = f"Removed {removed_exp} EXP from {member.mention}."
 
         response += (
-            f" They are now level {new_level} with {new_exp}/{threshold} XP "
+            f" They are now level {new_level} with {new_exp}/{threshold} EXP "
             "toward the next level."
         )
         await interaction.response_or_followup(response)
