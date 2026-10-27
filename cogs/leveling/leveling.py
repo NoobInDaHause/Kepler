@@ -416,7 +416,7 @@ class Leveling(commands.Cog):
         )
 
         desc += (
-            (interaction.guild.get_channel(guild_data["levelup_channel"])).mention
+            interaction.guild.get_channel(guild_data["levelup_channel"])
             if guild_data["levelup_channel"]
             else "None"
         )
