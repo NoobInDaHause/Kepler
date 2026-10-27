@@ -71,14 +71,14 @@ class LevelingDataBase(DataManager):
         )
 
         return {
-            "enabled": result[0],
-            "min_exp": result[1],
-            "max_exp": result[2],
-            "rate": result[3],
-            "cooldown": result[4],
-            "threshold_multiplier": result[5],
-            "level_threshold": result[6],
-            "levelup_channel": result[7],
+            "enabled": result[1],
+            "min_exp": result[2],
+            "max_exp": result[3],
+            "rate": result[4],
+            "cooldown": result[5],
+            "threshold_multiplier": result[6],
+            "level_threshold": result[7],
+            "levelup_channel": result[8],
         }
 
     async def get_member_data(self, guild_id: int, member_id: int) -> Dict[str, int]:
