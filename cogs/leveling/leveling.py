@@ -193,7 +193,7 @@ class Leveling(commands.Cog):
         await self.db.execute(
             """
             INSERT INTO guilds (guild_id, enabled)
-            VALUES (?, 1)
+            VALUES (?, ?)
             ON CONFLICT (guild_id)
             DO UPDATE SET enabled = excluded.enabled
             """,
