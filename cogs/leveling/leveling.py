@@ -351,7 +351,7 @@ class Leveling(commands.Cog):
         interaction: KeplerInteraction,
         base_exp: int = 100,
         multiplier: float = 1.15,
-    ):
+    ) -> None:
         guild_id = interaction.guild.id
 
         await self.db.initialize_guild_or_member(True, (guild_id,))
