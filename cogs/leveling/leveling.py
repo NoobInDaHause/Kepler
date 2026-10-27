@@ -304,16 +304,17 @@ class Leveling(commands.Cog):
     @has_permissions(manage_guild=True)
     @app_commands.describe(
         rate="The number of messages a member can send before the cooldown is applied. (default: 1)",
-        cooldown="The cooldown in seconds before a member can gain experience again. (default: 30)",
+        cd="The cooldown in seconds before a member can gain experience again. (default: 30)",
     )
+    @app_commands.rename(cd="cooldown")
     async def leveling_settings_setcooldown(
-        self, interaction: KeplerInteraction, rate: int = 1, cooldown: int = 30
+        self, interaction: KeplerInteraction, rate: int = 1, cd: int = 30
     ) -> None:
         guild_id = interaction.guild.id
 
         await self.db.initialize_guild_or_member(True, (guild_id,))
 
-        if cooldown < 0 or rate < 0:
+        if cd < 0 or rate < 0:
             return await interaction.response_or_followup(
                 "Invalid cooldown or rate. Ensure that both values are non-negative."
             )
@@ -325,14 +326,52 @@ class Leveling(commands.Cog):
             ON CONFLICT (guild_id)
             DO UPDATE SET rate = excluded.rate, cooldown = excluded.cooldown
             """,
-            (guild_id, rate, cooldown),
+            (guild_id, rate, cd),
         )
 
         self.cooldowns.pop(guild_id, None)
         self.cooldowns[guild_id] = commands.CooldownMapping.from_cooldown(
-            rate, cooldown, commands.BucketType.member
+            rate, cd, commands.BucketType.member
         )
 
         await interaction.response_or_followup(
-            f"Cooldown for gaining experience has been set to {rate} time per {cooldown} seconds."
+            f"Cooldown for gaining experience has been set to {rate} time per {cd} seconds."
+        )
+
+    @leveling_settings.command(
+        name="setthreshold", description="Set the exp needed per level."
+    )
+    @has_permissions(manage_guild=True)
+    @app_commands.describe(
+        base_exp="The base exp needed to level up. (default: 100)",
+        multiplier="The multiplier that multiplies the base threshold per level. (default: 1.15)",
+    )
+    async def level_settings_setthreshold(
+        self,
+        interaction: KeplerInteraction,
+        base_exp: int = 100,
+        multiplier: float = 1.15,
+    ):
+        guild_id = interaction.guild.id
+
+        await self.db.initialize_guild_or_member(True, (guild_id,))
+
+        if base_exp < 0 or multiplier < 1.01:
+            return await interaction.response_or_followup(
+                "Invalid base exp or multiplier. Ensure that both values are non-negative and/or "
+                "multiplier should not be lower than 1.01."
+            )
+
+        await self.db.execute(
+            """
+            INSERT INTO guilds (guild_id, level_threshold, threshold_multiplier)
+            VALUES (?, ?, ?)
+            ON CONFLICT (guild_id)
+            DO UPDATE SET level_threshold = excluded.level_threshold, threshold_multiplier = excluded.threshold_multiplier
+            """,
+            (guild_id, base_exp, multiplier),
+        )
+
+        await interaction.response_or_followup(
+            f"The base exp has been set to {base_exp} and will be multiplied by {multiplier} per level."
         )
