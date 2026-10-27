@@ -407,19 +407,19 @@ class Leveling(commands.Cog):
         guild_data = await self.db.get_guild_data(guild_id)
 
         desc = (
-            f"Enabled: {bool(guild_data['enabled'])}\n"
+            f"Enabled: {guild_data['enabled']}\n"
             f"Minimum exp per message: {guild_data['min_exp']}\n"
             f"Maximum exp per message: {guild_data['max_exp']}\n"
             f"Message cooldown: {guild_data['rate']} per {guild_data['cooldown']} seconds.\n"
             f"Level threshold: base {guild_data['level_threshold']}, multiplier {guild_data['threshold_multiplier']}\n"
-            "Levelup announcement channel: "
+            f"Levelup announcement channel: {guild_data['levelup_channel']}"
         )
 
-        desc += (
-            interaction.guild.get_channel(guild_data["levelup_channel"])
-            if guild_data["levelup_channel"]
-            else "None"
-        )
+        # desc += (
+        #     interaction.guild.get_channel(guild_data["levelup_channel"])
+        #     if guild_data["levelup_channel"]
+        #     else "None"
+        # )
 
         embed = discord.Embed(
             title=f"Leveling settings for {interaction.guild}",
