@@ -462,6 +462,11 @@ class Leveling(commands.Cog):
         member: discord.Member,
         exp: int,
     ) -> None:
+        if member.bot:
+            return await interaction.response_or_followup(
+                content="Can not add or remove exp from bots."
+            )
+
         guild_id = interaction.guild.id
         member_id = member.id
 
