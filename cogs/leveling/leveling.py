@@ -1,3 +1,4 @@
+import contextlib
 import math
 import random
 from typing import Dict
@@ -38,6 +39,7 @@ class Leveling(commands.Cog):
     async def announce_levelup(
         self, message: discord.Message, old_level: int, new_level: int
     ) -> None:
+
         levelup_channel_id = await self.db.execute(
             "SELECT levelup_channel FROM guilds WHERE guild_id = ?",
             (message.guild.id,),
@@ -45,17 +47,22 @@ class Leveling(commands.Cog):
             one_all="one",
         )
 
-        if levelup_channel_id[0] is not None:
-            channel = self.bot.get_channel(levelup_channel_id[0])
-            if channel is not None:
-                await channel.send(
-                    f"Congratulations {message.author.mention}, you leveled up!\n"
-                    f"Old Level: {old_level}, New Level: {new_level}"
-                )
-        else:
-            await message.channel.send(
-                f"Congratulations {message.author.mention}, you leveled up!\n"
-                f"Old Level: {old_level}, New Level: {new_level}"
+        channel = (
+            message.guild.get_channel(levelup_channel_id[0])
+            if levelup_channel_id[0] is not None
+            else message.channel
+        )
+
+        with contextlib.suppress(discord.errors.Forbidden):
+            embed = discord.Embed(
+                title="Level Up",
+                description=f"**`{old_level}` -> `{new_level}`**",
+                color=self.bot.colour,
+                timestamp=discord.utils.utcnow(),
+            )
+            embed.set_thumbnail(url=message.author.display_avatar.url)
+            await channel.send(
+                content=f"Congratulations {message.author.mention}!", embed=embed
             )
 
     @commands.Cog.listener("on_message")
@@ -176,7 +183,7 @@ class Leveling(commands.Cog):
     leveling_settings = LevelingSettings()
 
     @leveling_settings.command(
-        name="enable", description="Enable leveling system for this guild."
+        name="enable", description="Enable or disable leveling system for this guild."
     )
     async def levelingsettings_enable(self, interaction: KeplerInteraction) -> None:
         guild_id = interaction.guild.id
@@ -230,6 +237,13 @@ class Leveling(commands.Cog):
                 "Level up announcement channel has been removed."
             )
         else:
+            if (
+                not channel.permissions_for(interaction.guild.me).send_messages
+                or not channel.permissions_for(interaction.guild.me).embed_links
+            ):
+                return await interaction.response_or_followup(
+                    f"I do not have permission to send messages and/or embed links in {channel.mention}.",
+                )
             await self.db.execute(
                 """
                 INSERT INTO guilds (guild_id, levelup_channel)
