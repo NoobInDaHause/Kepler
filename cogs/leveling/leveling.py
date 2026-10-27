@@ -17,7 +17,7 @@ from .leveling_data_manager import LevelingDataBase
 class LevelingSettings(app_commands.Group):
     def __init__(self):
         super().__init__(
-            name="leveling", description="Manage leveling settings for this guild."
+            name="levelingsettings", description="Manage leveling settings for this guild."
         )
 
 
