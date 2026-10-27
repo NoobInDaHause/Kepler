@@ -33,10 +33,19 @@ class Leveling(commands.Cog):
         self.cooldowns: Dict[int, commands.CooldownMapping] = {}
 
     @staticmethod
-    def make_progress_bar(exp: int, threshold: int, length: int = 12) -> str:
-        progress = min(exp / threshold, 1.0)
-        filled = int(progress * length)
-        return f"{'█' * filled}{'░' * (length - filled)} {exp / threshold:.1%}"
+    def make_progress_bar(exp: int, threshold: int, length: int = 20) -> str:
+        progress = min(max(exp / threshold, 0.0), 1.0)
+        units = round(progress * length * 2)
+        full, half = divmod(units, 2)
+
+        bar = "■" * full
+
+        if half and full < length:
+            bar += "▣"
+
+        bar += "□" * (length - full - half)
+
+        return f"{bar} {progress:.2%}"
 
     async def cog_load(self) -> None:
         await self.db.initialize()
