@@ -120,8 +120,14 @@ class Leveling(commands.Cog):
                     * (guild_exp_data["threshold_multiplier"] ** now_level)
                 )
 
-            await self.db.insert_or_update_member_level(
-                guild_id, member_id, now_exp, now_level
+            await self.db.execute(
+                """
+                INSERT INTO members (guild_id, member_id, exp, level)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT (guild_id, member_id)
+                DO UPDATE SET exp = excluded.exp, level = excluded.level
+                """,
+                (guild_id, member_id, now_exp, now_level),
             )
 
             if now_level > old_level:

@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Dict, Tuple, Union
 
 from utilities.data_manager import DataManager
 
@@ -30,7 +30,16 @@ class LevelingDataBase(DataManager):
             );
             """)
 
-    async def initialize_guild_or_member(self, is_guild: bool, _id: tuple) -> None:
+    async def initialize_guild_or_member(self, is_guild: bool, _id: Tuple[int]) -> None:
+        """Ensure that a guild or member has a database record. Create the record only when it does not already exist.
+
+        Args:
+            is_guild: Whether the identifier refers to a guild rather than a member.
+            _id: A tuple containing the guild ID, or the guild and member IDs.
+
+        Returns:
+            None.
+        """
         if is_guild:
             if not await self.execute(
                 "SELECT * FROM guilds WHERE guild_id = ?",
@@ -79,16 +88,3 @@ class LevelingDataBase(DataManager):
         )
 
         return {"exp": result[0], "level": result[1]}
-
-    async def insert_or_update_member_level(
-        self, guild_id: int, member_id: int, exp: int, level: int
-    ) -> None:
-        await self.execute(
-            """
-            INSERT INTO members (guild_id, member_id, exp, level)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT (guild_id, member_id)
-            DO UPDATE SET exp = excluded.exp, level = excluded.level
-            """,
-            (guild_id, member_id, exp, level),
-        )
