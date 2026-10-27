@@ -454,6 +454,7 @@ class Leveling(commands.Cog):
         member="The target member.",
         exp="The amount of experience to add or remove.",
     )
+    @app_commands.rename(act="action")
     async def levelexp(
         self,
         interaction: KeplerInteraction,
