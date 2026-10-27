@@ -328,6 +328,11 @@ class Leveling(commands.Cog):
             (guild_id, rate, cooldown),
         )
 
+        self.cooldowns.pop(guild_id, None)
+        self.cooldowns[guild_id] = commands.CooldownMapping.from_cooldown(
+            rate, cooldown, commands.BucketType.member
+        )
+
         await interaction.response_or_followup(
             f"Cooldown for gaining experience has been set to {rate} time per {cooldown} seconds."
         )
