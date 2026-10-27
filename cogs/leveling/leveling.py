@@ -7,9 +7,18 @@ from discord import app_commands
 from discord.ext import commands
 
 from keplerbot import Kepler, KeplerInteraction
-from utilities.checks import bot_has_permissions, cooldown
+from utilities.checks import bot_has_permissions, cooldown, has_permissions
 
 from .leveling_data_manager import LevelingDataBase
+
+
+@app_commands.guild_only()
+@has_permissions(manage_guild=True)
+class LevelingSettings(app_commands.Group):
+    def __init__(self):
+        super().__init__(
+            name="leveling", description="Manage leveling settings for this guild."
+        )
 
 
 class Leveling(commands.Cog):
@@ -132,6 +141,19 @@ class Leveling(commands.Cog):
         guild_id = interaction.guild.id
 
         await self.db.initialize_guild_or_member(True, (guild_id,))
+
+        enabled = await self.db.execute(
+            "SELECT enabled FROM guilds WHERE guild_id = ?",
+            (guild_id,),
+            select=True,
+            one_all="one",
+        )
+
+        if enabled[0] == 0:
+            return await interaction.response_or_followup(
+                "Leveling system is not enabled for this guild. Ask an admin to enable it."
+            )
+
         await self.db.initialize_guild_or_member(False, (guild_id, member_id))
 
         member_data = await self.db.get_member_data(guild_id, member_id)
@@ -149,3 +171,73 @@ class Leveling(commands.Cog):
         )
 
         await interaction.response_or_followup(embed=embed)
+
+    leveling_settings = LevelingSettings()
+
+    @leveling_settings.command(
+        name="enable", description="Enable leveling system for this guild."
+    )
+    async def levelingsettings_enable(self, interaction: KeplerInteraction) -> None:
+        guild_id = interaction.guild.id
+
+        await self.db.initialize_guild_or_member(True, (guild_id,))
+
+        enabled = await self.db.execute(
+            "SELECT enabled FROM guilds WHERE guild_id = ?",
+            (guild_id,),
+            select=True,
+            one_all="one",
+        )
+        bool_conv = bool(enabled[0])
+
+        await self.db.execute(
+            """
+            INSERT INTO guilds (guild_id, enabled)
+            VALUES (?, 1)
+            ON CONFLICT (guild_id)
+            DO UPDATE SET enabled = excluded.enabled
+            """,
+            (guild_id, int(not bool_conv)),
+        )
+
+        await interaction.response_or_followup(
+            f"Leveling system has been {'disabled' if bool_conv else 'enabled'} for this guild."
+        )
+
+    @leveling_settings.command(
+        name="levelupchannel",
+        description="Set or remove the level up announcement channel.",
+    )
+    async def levelingsettings_levelupchannel(
+        self, interaction: KeplerInteraction, channel: discord.TextChannel = None
+    ) -> None:
+        guild_id = interaction.guild.id
+
+        await self.db.initialize_guild_or_member(True, (guild_id,))
+
+        if channel is None:
+            await self.db.execute(
+                """
+                INSERT INTO guilds (guild_id, levelup_channel)
+                VALUES (?, NULL)
+                ON CONFLICT (guild_id)
+                DO UPDATE SET levelup_channel = NULL
+                """,
+                (guild_id,),
+            )
+            await interaction.response_or_followup(
+                "Level up announcement channel has been removed."
+            )
+        else:
+            await self.db.execute(
+                """
+                INSERT INTO guilds (guild_id, levelup_channel)
+                VALUES (?, ?)
+                ON CONFLICT (guild_id)
+                DO UPDATE SET levelup_channel = excluded.levelup_channel
+                """,
+                (guild_id, channel.id),
+            )
+            await interaction.response_or_followup(
+                f"Level up announcement channel has been set to {channel.mention}.",
+            )

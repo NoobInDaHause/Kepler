@@ -28,7 +28,6 @@ class Kepler(commands.AutoShardedBot):
 
     __version__ = (PROJECT_ROOT / "version.txt").read_text(encoding="utf-8").strip()
     uptime = datetime.now(timezone.utc)
-    log = logging.getLogger("Kepler")
 
     def __init__(self, settings: Settings):
         super().__init__(
@@ -40,6 +39,7 @@ class Kepler(commands.AutoShardedBot):
         self.blacklisted_user_ids = settings.blacklisted_user_ids
         self.global_hex_colour = settings.global_hex_colour
         self.custom_info = settings.custom_info
+        self.log = logging.getLogger("Kepler")
         self.exit_code = 0
 
     @property

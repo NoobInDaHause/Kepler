@@ -19,7 +19,7 @@ class LevelingDataBase(DataManager):
 
             CREATE TABLE IF NOT EXISTS guilds (
                 guild_id INTEGER NOT NULL PRIMARY KEY,
-                enabled INTEGER NOT NULL DEFAULT 1,
+                enabled INTEGER NOT NULL DEFAULT 0,
                 min_exp INTEGER NOT NULL DEFAULT 15,
                 max_exp INTEGER NOT NULL DEFAULT 25,
                 rate INTEGER NOT NULL DEFAULT 1,
