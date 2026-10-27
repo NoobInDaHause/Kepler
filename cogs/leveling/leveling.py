@@ -411,7 +411,7 @@ class Leveling(commands.Cog):
             f"Minimum exp per message: {guild_data['min_exp']}\n"
             f"Maximum exp per message: {guild_data['max_exp']}\n"
             f"Message cooldown: {guild_data['rate']} per {guild_data['cooldown']} seconds.\n"
-            f"Level threshold: base {guild_data['level_threshold']}, multiplier {guild_data['multiplier']}\n"
+            f"Level threshold: base {guild_data['level_threshold']}, multiplier {guild_data['threshold_multiplier']}\n"
             "Levelup announcement channel: "
         )
 
