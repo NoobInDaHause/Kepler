@@ -132,9 +132,8 @@ class Leveling(commands.Cog):
     )
     @app_commands.guild_only()
     @bot_has_permissions(embed_links=True)
-    @cooldown(
-        1, 5, key=lambda interaction: (interaction.guild_id, interaction.user.id)
-    )
+    @cooldown(1, 5, key=lambda interaction: (interaction.guild_id, interaction.user.id))
+    @app_commands.describe(member="The member to check the level of.")
     async def level(
         self, interaction: KeplerInteraction, member: discord.Member = None
     ) -> None:
@@ -185,7 +184,7 @@ class Leveling(commands.Cog):
         name="enable", description="Enable or disable leveling system for this guild."
     )
     @has_permissions(manage_guild=True)
-    async def levelingsettings_enable(self, interaction: KeplerInteraction) -> None:
+    async def leveling_settings_enable(self, interaction: KeplerInteraction) -> None:
         guild_id = interaction.guild.id
 
         await self.db.initialize_guild_or_member(True, (guild_id,))
@@ -217,7 +216,10 @@ class Leveling(commands.Cog):
         description="Set or remove the level up announcement channel.",
     )
     @has_permissions(manage_guild=True)
-    async def levelingsettings_levelupchannel(
+    @app_commands.describe(
+        channel="The channel to send level up announcements in. Leave empty to remove."
+    )
+    async def leveling_settings_levelupchannel(
         self, interaction: KeplerInteraction, channel: discord.TextChannel = None
     ) -> None:
         guild_id = interaction.guild.id
@@ -257,3 +259,41 @@ class Leveling(commands.Cog):
             await interaction.response_or_followup(
                 f"Level up announcement channel has been set to {channel.mention}.",
             )
+
+    @leveling_settings.command(
+        name="setexp", description="Set the experience range for leveling."
+    )
+    @has_permissions(manage_guild=True)
+    @app_commands.describe(
+        min_exp="The minimum experience a member can gain per message. (default: 15)",
+        max_exp="The maximum experience a member can gain per message. (default: 25)",
+    )
+    async def leveling_settings_setexp(
+        self,
+        interaction: KeplerInteraction,
+        min_exp: int = 15,
+        max_exp: int = 25,
+    ) -> None:
+        guild_id = interaction.guild.id
+
+        await self.db.initialize_guild_or_member(True, (guild_id,))
+
+        if min_exp < 0 or max_exp < 0 or min_exp > max_exp:
+            return await interaction.response_or_followup(
+                "Invalid experience range. Ensure that both values are non-negative and that the "
+                "minimum is not greater than the maximum."
+            )
+
+        await self.db.execute(
+            """
+            INSERT INTO guilds (guild_id, min_exp, max_exp)
+            VALUES (?, ?, ?)
+            ON CONFLICT (guild_id)
+            DO UPDATE SET min_exp = excluded.min_exp, max_exp = excluded.max_exp
+            """,
+            (guild_id, min_exp, max_exp),
+        )
+
+        await interaction.response_or_followup(
+            f"Experience range has been set to {min_exp} - {max_exp}."
+        )
