@@ -103,7 +103,7 @@ class OwnerView(discord.ui.View):
 
                 if command == "botstatus":
                     await self.cog.update_bot_status(interaction, argument)
-                    await interaction.response_or_followup(content="Done.")
+                    interaction.client.save_settings()
                     return
             except ValueError as e:
                 await interaction.response_or_followup(content=str(e))

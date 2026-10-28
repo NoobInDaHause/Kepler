@@ -444,7 +444,7 @@ class Leveling(commands.Cog):
         await interaction.response_or_followup(embed=embed)
 
     @app_commands.command(
-        name="levelexp",
+        name="setexp",
         description="Add or remove experience from a member.",
     )
     @app_commands.guild_only()
@@ -455,7 +455,7 @@ class Leveling(commands.Cog):
         exp="The amount of experience to add or remove.",
     )
     @app_commands.rename(act="action")
-    async def levelexp(
+    async def setexp(
         self,
         interaction: KeplerInteraction,
         act: Literal["add", "remove"],

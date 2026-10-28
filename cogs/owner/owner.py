@@ -286,8 +286,8 @@ class Owner(commands.Cog):
                 content="Invalid argument. Usage: command:botstatus argument:<status>,<activity_type>,<status_name>"
             )
 
-        status = {"online", "idle", "dnd", "offline"}
-        activity = {"playing", "listening", "watching", "competing"}
+        status = ["online", "idle", "dnd", "offline"]
+        activity = ["playing", "listening", "watching", "competing"]
 
         bot_status = {
             "status": splitted[0],
@@ -306,6 +306,7 @@ class Owner(commands.Cog):
 
         self.bot.bot_status = bot_status
         await self.bot.setup_status()
+        await interaction.response_or_followup(content="Done.")
 
     @app_commands.command(name="owner", description="Owner only commands.")
     @is_owner()
