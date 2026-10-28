@@ -39,6 +39,7 @@ class Kepler(commands.AutoShardedBot):
         self.blacklisted_user_ids = settings.blacklisted_user_ids
         self.global_hex_colour = settings.global_hex_colour
         self.custom_info = settings.custom_info
+        self.bot_status = settings.bot_status
         self.log = logging.getLogger("Kepler")
         self.exit_code = 0
 
@@ -119,11 +120,7 @@ class Kepler(commands.AutoShardedBot):
             "release_url": release_url,
         }
 
-    async def setup_hook(self) -> None:
-        app_info = await self.application_info()
-        members = app_info.team.members if app_info.team else [app_info.owner]
-        self.owner_ids = {member.id for member in members}
-
+    async def setup_load_cogs(self):
         cogs_path = Path(__file__).parents[1] / "cogs"
         for cog_folder in cogs_path.iterdir():
             if cog_folder.is_dir() and (cog_folder / "__init__.py").is_file():
@@ -153,6 +150,46 @@ class Kepler(commands.AutoShardedBot):
                 plural,
                 discord.utils._human_join(cog_names, final="and"),
             )
+
+    async def setup_status(self):
+        act, desc = self.bot_status["activity"], self.bot_status["description"]
+        stat = self.bot_status["status"]
+
+        activity = discord.Activity(
+            type=(
+                discord.ActivityType.playing
+                if act == "playing"
+                else (
+                    discord.ActivityType.listening
+                    if act == "listening"
+                    else (
+                        discord.ActivityType.watching
+                        if act == "watching"
+                        else discord.ActivityType.competing
+                    )
+                )
+            ),
+            name=desc,
+        )
+
+        status = (
+            discord.Status.online
+            if stat == "online"
+            else (
+                discord.Status.idle
+                if stat == "idle"
+                else discord.Status.dnd if stat == "dnd" else discord.Status.offline
+            )
+        )
+
+        await self.change_presence(activity=activity, status=status)
+
+    async def setup_hook(self) -> None:
+        app_info = await self.application_info()
+        members = app_info.team.members if app_info.team else [app_info.owner]
+        self.owner_ids = {member.id for member in members}
+
+        await self.setup_load_cogs()
 
         self.log.info("Syncing commands...")
         await self.tree.sync()
@@ -185,6 +222,8 @@ class Kepler(commands.AutoShardedBot):
             )
         else:
             self.log.info("Kepler is up to date.")
+
+        await self.setup_status()
 
     async def on_message(self, message: discord.Message):
         if await self.is_owner(message.author):

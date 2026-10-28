@@ -1,5 +1,10 @@
 {
     "global_hex_colour": "#276a8a",
     "blacklisted_user_ids": [],
-    "custom_info": null
+    "custom_info": null,
+    "bot_status": {
+        "status": "online",
+        "activity": "playing",
+        "description": "Powered by Kepler"
+    } 
 }

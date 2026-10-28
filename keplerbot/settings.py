@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from utilities.data_manager import DataManager
 
@@ -16,6 +16,7 @@ class Settings:
     global_hex_colour: str
     blacklisted_user_ids: List[int]
     custom_info: Optional[str]
+    bot_status: Dict[str]
 
     # migrate from sqlite to json v0.5.0 -> v1.0.0
     @staticmethod
@@ -43,5 +44,13 @@ class Settings:
             data.setdefault(
                 "custom_info", await cls.migrate_custom_info()
             )  # custom info moved from general to bot config in v1.0.0
+            data.setdefault(
+                "bot_status",
+                {
+                    "status": "online",
+                    "activity": "playing",
+                    "description": "Powered by Kepler",
+                },
+            )
 
         return cls(**data)
