@@ -223,6 +223,7 @@ class Kepler(commands.AutoShardedBot):
         else:
             self.log.info("Kepler is up to date.")
 
+    async def on_ready(self) -> None:
         await self.setup_status()
 
     async def on_message(self, message: discord.Message):
@@ -296,6 +297,7 @@ class Kepler(commands.AutoShardedBot):
                 "global_hex_colour": self.global_hex_colour,
                 "blacklisted_user_ids": self.blacklisted_user_ids,
                 "custom_info": self.custom_info,
+                "bot_status": self.bot_status,
             }
             json.dump(data, conf, indent=4)
             self.log.info("Settings successfully saved.")
