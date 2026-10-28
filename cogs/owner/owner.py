@@ -278,6 +278,35 @@ class Owner(commands.Cog):
         )
         await interaction.response_or_followup(embed=embed)
 
+    async def update_bot_status(self, interaction: KeplerInteraction, argument: str):
+        splitted = argument.split(",", 3)
+
+        if len(splitted) < 3:
+            return await interaction.response_or_followup(
+                content="Invalid argument. Usage: command:botstatus argument:<status>,<activity_type>,<status_name>"
+            )
+
+        status = {"online", "idle", "dnd", "offline"}
+        activity = {"playing", "listening", "watching", "competing"}
+
+        bot_status = {
+            "status": splitted[0],
+            "activity": splitted[1],
+            "description": splitted[2],
+        }
+
+        if bot_status["status"] not in status:
+            return await interaction.response_or_followup(
+                content=f"Invalid status. Should only be {discord.utils._human_join(status)}."
+            )
+        if bot_status["activity"] not in activity:
+            return await interaction.response_or_followup(
+                content=f"Invalid activity. Should only be {discord.utils._human_join(activity)}"
+            )
+
+        self.bot.bot_status = bot_status
+        await self.bot.setup_status()
+
     @app_commands.command(name="owner", description="Owner only commands.")
     @is_owner()
     @bot_has_permissions(attach_files=True, embed_links=True)
@@ -313,6 +342,8 @@ class Owner(commands.Cog):
             `Usage: command:unblacklist argument:[users...]`
             > **custominfo**: Add/change/remove a custom info from the /botinfo slash command. Leave argument blank to remove.
             `Usage: command:custominfo argument:[new_info]`
+            > **botstatus**: Change the status of the bot.
+            `Usage: command:botstatus argument:<status>,<activity_type>,<status_name>`
             """
         embed = discord.Embed(
             title="Owner command pannel", description=desc, colour=self.bot.colour
