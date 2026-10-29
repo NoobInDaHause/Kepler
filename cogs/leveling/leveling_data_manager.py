@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, Union
+from typing import Dict, Union
 
 from utilities.data_manager import DataManager
 
@@ -30,45 +30,25 @@ class LevelingDataBase(DataManager):
             );
             """)
 
-    async def initialize_guild_or_member(self, is_guild: bool, _id: Tuple[int]) -> None:
-        """Ensure that a guild or member has a database record. Create the record only when it does not already exist.
-
-        Args:
-            is_guild: Whether the identifier refers to a guild rather than a member.
-            _id: A tuple containing the guild ID, or the guild and member IDs.
-
-        Returns:
-            None.
-        """
-        if is_guild:
-            if not await self.execute(
-                "SELECT * FROM guilds WHERE guild_id = ?",
-                (_id[0],),
-                select=True,
-                one_all="all",
-            ):
-                await self.execute(
-                    "INSERT INTO guilds (guild_id) VALUES (?)",
-                    (_id[0],),
-                )
-        elif not await self.execute(
-            "SELECT * FROM members WHERE guild_id = ? AND member_id = ?",
-            (_id[0], _id[1]),
-            select=True,
-            one_all="all",
-        ):
-            await self.execute(
-                "INSERT INTO members (guild_id, member_id) VALUES (?, ?)",
-                (_id[0], _id[1]),
-            )
-
-    async def get_guild_data(self, guild_id: int) -> Dict[str, Union[int, float]]:
+    async def get_guild_data(self, guild_id: int) -> Dict[str, Union[int, float, None]]:
         result = await self.execute(
             "SELECT * FROM guilds WHERE guild_id = ?",
             (guild_id,),
             select=True,
             one_all="one",
         )
+
+        if not result:
+            return {
+                "enabled": 0,
+                "min_exp": 15,
+                "max_exp": 25,
+                "rate": 1,
+                "cooldown": 30,
+                "threshold_multiplier": 1.15,
+                "level_threshold": 100,
+                "levelup_channel": None,
+            }
 
         return {
             "enabled": result[1],
@@ -88,5 +68,8 @@ class LevelingDataBase(DataManager):
             select=True,
             one_all="one",
         )
+
+        if not result:
+            return {"exp": 0, "level": 0}
 
         return {"exp": result[0], "level": result[1]}

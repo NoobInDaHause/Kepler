@@ -58,14 +58,10 @@ class Leveling(commands.Cog):
         self, message: discord.Message, old_level: int, new_level: int
     ) -> None:
 
-        levelup_channel_id = await self.db.execute(
-            "SELECT levelup_channel FROM guilds WHERE guild_id = ?",
-            (message.guild.id,),
-            select=True,
-            one_all="one",
+        guild_data = await self.db.get_guild_data(message.guild.id)
+        channel = (
+            message.guild.get_channel(guild_data["levelup_channel"]) or message.channel
         )
-
-        channel = message.guild.get_channel(levelup_channel_id[0]) or message.channel
 
         with contextlib.suppress(discord.errors.Forbidden):
             embed = discord.Embed(
@@ -87,21 +83,9 @@ class Leveling(commands.Cog):
         member_id = message.author.id
         guild_id = message.guild.id
 
-        await self.db.initialize_guild_or_member(True, (guild_id,))
-
-        enabled = await self.db.execute(
-            "SELECT enabled FROM guilds WHERE guild_id = ?",
-            (guild_id,),
-            select=True,
-            one_all="one",
-        )
-
-        if enabled[0] == 0:
-            return
-
-        await self.db.initialize_guild_or_member(False, (guild_id, member_id))
-
         guild_exp_data = await self.db.get_guild_data(guild_id)
+        if guild_exp_data["enabled"] == 0:
+            return
 
         if (
             not self.cooldowns.setdefault(
@@ -169,24 +153,13 @@ class Leveling(commands.Cog):
         member_id = member.id
         guild_id = interaction.guild.id
 
-        await self.db.initialize_guild_or_member(True, (guild_id,))
-
-        enabled = await self.db.execute(
-            "SELECT enabled FROM guilds WHERE guild_id = ?",
-            (guild_id,),
-            select=True,
-            one_all="one",
-        )
-
-        if enabled[0] == 0:
+        guild_exp_data = await self.db.get_guild_data(guild_id)
+        if guild_exp_data["enabled"] == 0:
             return await interaction.response_or_followup(
                 "Leveling system is not enabled for this guild. Ask an admin to enable it."
             )
 
-        await self.db.initialize_guild_or_member(False, (guild_id, member_id))
-
         member_data = await self.db.get_member_data(guild_id, member_id)
-        guild_exp_data = await self.db.get_guild_data(guild_id)
 
         threshold = self.threshold_for_level(
             member_data["level"],
@@ -205,6 +178,62 @@ class Leveling(commands.Cog):
 
         await interaction.response_or_followup(embed=embed)
 
+    @app_commands.command(
+        name="leaderboard",
+        description="View the top members by level and experience.",
+    )
+    @app_commands.guild_only()
+    @bot_has_permissions(embed_links=True)
+    @cooldown(1, 5, key=lambda interaction: (interaction.guild_id, interaction.user.id))
+    async def leaderboard(self, interaction: KeplerInteraction) -> None:
+        guild_id = interaction.guild.id
+
+        guild_exp_data = await self.db.get_guild_data(guild_id)
+        if guild_exp_data["enabled"] == 0:
+            return await interaction.response_or_followup(
+                "Leveling system is not enabled for this guild. Ask an admin to enable it."
+            )
+
+        members = await self.db.execute(
+            """
+            SELECT member_id, exp, level
+            FROM members
+            WHERE guild_id = ?
+            ORDER BY level DESC, exp DESC, member_id ASC
+            LIMIT 10
+            """,
+            (guild_id,),
+            select=True,
+            one_all="all",
+        )
+
+        if not members:
+            return await interaction.response_or_followup(
+                "No members have earned experience yet."
+            )
+
+        entries = []
+        for rank, (member_id, exp, level) in enumerate(members, start=1):
+            threshold = self.threshold_for_level(
+                level,
+                guild_exp_data["level_threshold"],
+                guild_exp_data["threshold_multiplier"],
+            )
+            entries.append(
+                f"**{rank}.** <@{member_id}> — Level **{level}** · "
+                f"**{exp}/{threshold} EXP**"
+            )
+
+        embed = discord.Embed(
+            title=f"{interaction.guild.name} Leaderboard",
+            description="\n".join(entries),
+            color=self.bot.colour,
+            timestamp=discord.utils.utcnow(),
+        )
+        embed.set_footer(text="Ranked by level, then current EXP")
+
+        await interaction.response_or_followup(embed=embed)
+
     # ------------------------------ Settings ----------------------------------------
     leveling_settings = LevelingSettings()
 
@@ -215,15 +244,8 @@ class Leveling(commands.Cog):
     async def leveling_settings_enable(self, interaction: KeplerInteraction) -> None:
         guild_id = interaction.guild.id
 
-        await self.db.initialize_guild_or_member(True, (guild_id,))
-
-        enabled = await self.db.execute(
-            "SELECT enabled FROM guilds WHERE guild_id = ?",
-            (guild_id,),
-            select=True,
-            one_all="one",
-        )
-        bool_conv = bool(enabled[0])
+        guild_data = await self.db.get_guild_data(guild_id)
+        bool_conv = bool(guild_data["enabled"])
 
         await self.db.execute(
             """
@@ -251,8 +273,6 @@ class Leveling(commands.Cog):
         self, interaction: KeplerInteraction, channel: discord.TextChannel = None
     ) -> None:
         guild_id = interaction.guild.id
-
-        await self.db.initialize_guild_or_member(True, (guild_id,))
 
         if channel is None:
             await self.db.execute(
@@ -304,8 +324,6 @@ class Leveling(commands.Cog):
     ) -> None:
         guild_id = interaction.guild.id
 
-        await self.db.initialize_guild_or_member(True, (guild_id,))
-
         if min_exp < 0 or max_exp < 0 or min_exp > max_exp:
             return await interaction.response_or_followup(
                 "Invalid experience range. Ensure that both values are non-negative and that the "
@@ -339,8 +357,6 @@ class Leveling(commands.Cog):
         self, interaction: KeplerInteraction, rate: int = 1, cd: int = 30
     ) -> None:
         guild_id = interaction.guild.id
-
-        await self.db.initialize_guild_or_member(True, (guild_id,))
 
         if cd < 0 or rate < 0:
             return await interaction.response_or_followup(
@@ -382,8 +398,6 @@ class Leveling(commands.Cog):
     ) -> None:
         guild_id = interaction.guild.id
 
-        await self.db.initialize_guild_or_member(True, (guild_id,))
-
         if base_exp < 1 or multiplier < 0:
             return await interaction.response_or_followup(
                 "Invalid base exp or multiplier. Ensure that base exp is not less than 1 and "
@@ -413,8 +427,6 @@ class Leveling(commands.Cog):
         self, interaction: KeplerInteraction
     ) -> None:
         guild_id = interaction.guild.id
-
-        await self.db.initialize_guild_or_member(True, (guild_id,))
 
         guild_data = await self.db.get_guild_data(guild_id)
 
@@ -469,9 +481,6 @@ class Leveling(commands.Cog):
 
         guild_id = interaction.guild.id
         member_id = member.id
-
-        await self.db.initialize_guild_or_member(True, (guild_id,))
-        await self.db.initialize_guild_or_member(False, (guild_id, member_id))
 
         guild_exp_data = await self.db.get_guild_data(guild_id)
         member_data = await self.db.get_member_data(guild_id, member_id)
