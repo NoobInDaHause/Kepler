@@ -186,8 +186,12 @@ class Leveling(commands.Cog):
     @app_commands.guild_only()
     @bot_has_permissions(embed_links=True)
     @cooldown(1, 5, key=lambda interaction: (interaction.guild_id, interaction.user.id))
-    @app_commands.describe(members_per_page="The number of members to show per page. (max 20)")
-    async def leaderboard(self, interaction: KeplerInteraction, members_per_page: int = 10) -> None:
+    @app_commands.describe(
+        members_per_page="The number of members to show per page. (max 20)"
+    )
+    async def leaderboard(
+        self, interaction: KeplerInteraction, members_per_page: int = 10
+    ) -> None:
         if members_per_page < 10 or members_per_page > 20:
             return await interaction.response_or_followup(
                 content="The range to display members should only be 10-20."
