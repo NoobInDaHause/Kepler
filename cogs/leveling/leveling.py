@@ -245,7 +245,7 @@ class Leveling(commands.Cog):
         embeds = []
         for index, page in enumerate(pages, start=1):
             embed = discord.Embed(
-                title=f"Top {members_per_page} members in `{interaction.guild.name}` Leaderboard",
+                title=f"Top member levels in `{interaction.guild.name}`.",
                 description=page,
                 color=self.bot.colour,
                 timestamp=discord.utils.utcnow(),
