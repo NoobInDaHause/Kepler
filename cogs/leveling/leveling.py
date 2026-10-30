@@ -9,6 +9,7 @@ from discord.ext import commands
 
 from keplerbot import Kepler, KeplerInteraction
 from utilities.checks import bot_has_permissions, cooldown, has_permissions
+from utilities.views import PaginatorView
 
 from .leveling_data_manager import LevelingDataBase
 
@@ -83,16 +84,16 @@ class Leveling(commands.Cog):
         member_id = message.author.id
         guild_id = message.guild.id
 
-        guild_exp_data = await self.db.get_guild_data(guild_id)
-        if guild_exp_data["enabled"] == 0:
+        guild_data = await self.db.get_guild_data(guild_id)
+        if guild_data["enabled"] == 0:
             return
 
         if (
             not self.cooldowns.setdefault(
                 guild_id,
                 commands.CooldownMapping.from_cooldown(
-                    guild_exp_data["rate"],
-                    guild_exp_data["cooldown"],
+                    guild_data["rate"],
+                    guild_data["cooldown"],
                     commands.BucketType.member,
                 ),
             )
@@ -101,15 +102,15 @@ class Leveling(commands.Cog):
         ):
             member_data = await self.db.get_member_data(guild_id, member_id)
             now_exp = member_data["exp"] + random.randint(
-                guild_exp_data["min_exp"], guild_exp_data["max_exp"]
+                guild_data["min_exp"], guild_data["max_exp"]
             )
             old_level = member_data["level"]
             now_level = old_level
 
             threshold = self.threshold_for_level(
                 now_level,
-                guild_exp_data["level_threshold"],
-                guild_exp_data["threshold_multiplier"],
+                guild_data["level_threshold"],
+                guild_data["threshold_multiplier"],
             )
 
             while now_exp >= threshold:
@@ -117,8 +118,8 @@ class Leveling(commands.Cog):
                 now_level = now_level + 1
                 threshold = self.threshold_for_level(
                     now_level,
-                    guild_exp_data["level_threshold"],
-                    guild_exp_data["threshold_multiplier"],
+                    guild_data["level_threshold"],
+                    guild_data["threshold_multiplier"],
                 )
 
             await self.db.execute(
@@ -153,8 +154,8 @@ class Leveling(commands.Cog):
         member_id = member.id
         guild_id = interaction.guild.id
 
-        guild_exp_data = await self.db.get_guild_data(guild_id)
-        if guild_exp_data["enabled"] == 0:
+        guild_data = await self.db.get_guild_data(guild_id)
+        if guild_data["enabled"] == 0:
             return await interaction.response_or_followup(
                 "Leveling system is not enabled for this guild. Ask an admin to enable it."
             )
@@ -163,8 +164,8 @@ class Leveling(commands.Cog):
 
         threshold = self.threshold_for_level(
             member_data["level"],
-            guild_exp_data["level_threshold"],
-            guild_exp_data["threshold_multiplier"],
+            guild_data["level_threshold"],
+            guild_data["threshold_multiplier"],
         )
 
         exp = member_data["exp"]
@@ -185,11 +186,17 @@ class Leveling(commands.Cog):
     @app_commands.guild_only()
     @bot_has_permissions(embed_links=True)
     @cooldown(1, 5, key=lambda interaction: (interaction.guild_id, interaction.user.id))
-    async def leaderboard(self, interaction: KeplerInteraction) -> None:
+    @app_commands.describe(members_per_page="The number of members to show per page. (max 20)")
+    async def leaderboard(self, interaction: KeplerInteraction, members_per_page: int = 10) -> None:
+        if members_per_page < 10 or members_per_page > 20:
+            return await interaction.response_or_followup(
+                content="The range to display members should only be 10-20."
+            )
+
         guild_id = interaction.guild.id
 
-        guild_exp_data = await self.db.get_guild_data(guild_id)
-        if guild_exp_data["enabled"] == 0:
+        guild_data = await self.db.get_guild_data(guild_id)
+        if guild_data["enabled"] == 0:
             return await interaction.response_or_followup(
                 "Leveling system is not enabled for this guild. Ask an admin to enable it."
             )
@@ -200,7 +207,6 @@ class Leveling(commands.Cog):
             FROM members
             WHERE guild_id = ?
             ORDER BY level DESC, exp DESC, member_id ASC
-            LIMIT 10
             """,
             (guild_id,),
             select=True,
@@ -212,27 +218,38 @@ class Leveling(commands.Cog):
                 "No members have earned experience yet."
             )
 
-        entries = []
+        entries = ""
+        pages = []
+
         for rank, (member_id, exp, level) in enumerate(members, start=1):
             threshold = self.threshold_for_level(
                 level,
-                guild_exp_data["level_threshold"],
-                guild_exp_data["threshold_multiplier"],
+                guild_data["level_threshold"],
+                guild_data["threshold_multiplier"],
             )
-            entries.append(
+            entries += (
                 f"**{rank}.** <@{member_id}> — Level **{level}** · "
-                f"**{exp}/{threshold} EXP**"
+                f"**{exp}/{threshold} EXP**\n"
             )
+            if rank % members_per_page == 0:
+                pages.append(entries)
+                entries = ""
 
-        embed = discord.Embed(
-            title=f"{interaction.guild.name} Leaderboard",
-            description="\n".join(entries),
-            color=self.bot.colour,
-            timestamp=discord.utils.utcnow(),
-        )
-        embed.set_footer(text="Ranked by level, then current EXP")
+        if entries:
+            pages.append(entries)
 
-        await interaction.response_or_followup(embed=embed)
+        embeds = []
+        for index, page in enumerate(pages, start=1):
+            embed = discord.Embed(
+                title=f"Top {members_per_page} members in `{interaction.guild.name}` Leaderboard",
+                description=page,
+                color=self.bot.colour,
+                timestamp=discord.utils.utcnow(),
+            )
+            embed.set_footer(text=f"Page ({index}/{len(pages)})")
+            embeds.append(embed)
+
+        await PaginatorView(interaction, embeds).start()
 
     # ------------------------------ Settings ----------------------------------------
     leveling_settings = LevelingSettings()
@@ -482,7 +499,7 @@ class Leveling(commands.Cog):
         guild_id = interaction.guild.id
         member_id = member.id
 
-        guild_exp_data = await self.db.get_guild_data(guild_id)
+        guild_data = await self.db.get_guild_data(guild_id)
         member_data = await self.db.get_member_data(guild_id, member_id)
 
         if exp < 0:
@@ -498,16 +515,16 @@ class Leveling(commands.Cog):
             new_exp += exp
             threshold = self.threshold_for_level(
                 new_level,
-                guild_exp_data["level_threshold"],
-                guild_exp_data["threshold_multiplier"],
+                guild_data["level_threshold"],
+                guild_data["threshold_multiplier"],
             )
             while new_exp >= threshold:
                 new_exp -= threshold
                 new_level += 1
                 threshold = self.threshold_for_level(
                     new_level,
-                    guild_exp_data["level_threshold"],
-                    guild_exp_data["threshold_multiplier"],
+                    guild_data["level_threshold"],
+                    guild_data["threshold_multiplier"],
                 )
         else:
             exp_remaining = exp
@@ -522,8 +539,8 @@ class Leveling(commands.Cog):
                     new_level -= 1
                     threshold = self.threshold_for_level(
                         new_level,
-                        guild_exp_data["level_threshold"],
-                        guild_exp_data["threshold_multiplier"],
+                        guild_data["level_threshold"],
+                        guild_data["threshold_multiplier"],
                     )
                     if exp_remaining < threshold:
                         new_exp = threshold - exp_remaining
@@ -543,8 +560,8 @@ class Leveling(commands.Cog):
 
         threshold = self.threshold_for_level(
             new_level,
-            guild_exp_data["level_threshold"],
-            guild_exp_data["threshold_multiplier"],
+            guild_data["level_threshold"],
+            guild_data["threshold_multiplier"],
         )
         if act == "add":
             response = f"Added {exp} EXP to {member.mention}."
