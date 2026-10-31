@@ -1,4 +1,3 @@
-from pathlib import Path
 import platform
 from time import perf_counter
 
