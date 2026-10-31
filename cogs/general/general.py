@@ -1,3 +1,4 @@
+from pathlib import Path
 import platform
 from time import perf_counter
 
@@ -6,6 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from keplerbot import Kepler, KeplerInteraction
+from keplerbot.settings import PROJECT_ROOT
 from utilities.checks import bot_has_permissions, cooldown
 
 
@@ -124,6 +126,13 @@ class General(commands.Cog):
             name="Kepler Version:",
             value=ver,
         )
+
+        if (PROJECT_ROOT / "is_dev.txt").exists():
+            embed.add_field(
+                name="Development Version:",
+                value="This instance uses the development version of Kepler, "
+                "some features may be unfinished and expect a ton of bugs.",
+            )
 
         embed.add_field(
             name="Uptime:",
