@@ -9,6 +9,7 @@ from utilities.data_manager import DataManager
 
 PROJECT_ROOT = Path(__file__).parents[1]
 COGS_DATA_PATH = Path(__file__).parents[1] / "cogs_data"
+IS_DEV = (PROJECT_ROOT / "is_dev.txt").exists()
 
 
 @dataclass

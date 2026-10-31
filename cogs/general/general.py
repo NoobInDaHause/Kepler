@@ -6,7 +6,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from keplerbot import Kepler, KeplerInteraction
-from keplerbot.settings import PROJECT_ROOT
+from keplerbot.settings import IS_DEV
 from utilities.checks import bot_has_permissions, cooldown
 
 
@@ -126,7 +126,7 @@ class General(commands.Cog):
             value=ver,
         )
 
-        if (PROJECT_ROOT / "is_dev.txt").exists():
+        if IS_DEV:
             embed.add_field(
                 name="Development Version:",
                 value="This instance uses the development version of Kepler, "

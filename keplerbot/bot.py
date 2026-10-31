@@ -10,7 +10,7 @@ import discord
 from discord.ext import commands
 from packaging.version import Version
 
-from .settings import PROJECT_ROOT, Settings
+from .settings import IS_DEV, PROJECT_ROOT, Settings
 from .tree import KeplerTree
 
 GITHUB_REPOSITORY = "NoobInDaHause/Kepler"
@@ -199,6 +199,12 @@ class Kepler(commands.AutoShardedBot):
 
         self.log.info("Logged in as %s (ID: %s).", self.user, self.user.id)
         self.log.info("--------------------------------------------------")
+
+        self.log.info(
+            "Running the %s Version of Kepler.%s",
+            "Development" if IS_DEV else "Stable",
+            " Expect unfinished features and many bugs." if IS_DEV else "",
+        )
 
         update = await self.get_updates()
         self.log.info("Checking for updates.")
