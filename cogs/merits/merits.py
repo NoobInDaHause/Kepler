@@ -19,7 +19,7 @@ class Merits(commands.Cog):
         self.bot = bot
         self.db = MeritsDataBase(self.__class__.__name__)
 
-    async def initialize(self) -> None:
+    async def cog_load(self) -> None:
         await self.db.initialize()
 
     async def _get_new_merits(
