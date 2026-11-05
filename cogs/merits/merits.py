@@ -197,6 +197,10 @@ class Merits(commands.Cog):
                 return await interaction.response_or_followup(
                     content="You must provide a role to add/update."
                 )
+            if interaction.user.top_role <= role:
+                return await interaction.response_or_followup(
+                    content="You cannot manage a role higher than or equal to your top role."
+                )
             if role.is_bot_managed():
                 return await interaction.response_or_followup(
                     content="I cannot manage bot managed roles."
