@@ -1,7 +1,8 @@
+from typing import Literal, Optional
+
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import Literal, Optional
 
 from keplerbot import Kepler, KeplerInteraction
 from utilities.checks import bot_has_permissions, has_permissions
