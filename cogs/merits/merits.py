@@ -175,27 +175,31 @@ class Merits(commands.Cog):
     )
     @app_commands.describe(
         action="Whether to add/update or remove a role for a certain merit threshold.",
-        role="The role to add or remove.",
         threshold="The merit threshold for the role.",
+        role="The role to add. (Only required for add/update action.)",
     )
     @has_permissions(manage_guild=True)
     async def merits_settings_roles(
         self,
         interaction: KeplerInteraction,
         action: Literal["add/update", "remove"],
-        role: discord.Role,
         threshold: int,
+        role: discord.Role = None,
     ) -> None:
-        if interaction.guild.me.top_role <= role:
-            return await interaction.response_or_followup(
-                content="I cannot manage that role due to role hierarchy."
-            )
 
         merit_roles = (await self.db.get_guild_data(interaction.guild.id))[
             "merit_roles"
         ]
 
         if action == "add/update":
+            if not role:
+                return await interaction.response_or_followup(
+                    content="You must provide a role to add/update."
+                )
+            if interaction.guild.me.top_role <= role:
+                return await interaction.response_or_followup(
+                    content="I cannot manage that role due to role hierarchy."
+                )
             merit_roles[str(threshold)] = role.id
             resp = "Added/updated"
         else:
