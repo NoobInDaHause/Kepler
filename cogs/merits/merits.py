@@ -14,7 +14,7 @@ from .merits_data_manager import MeritsDataBase
 @app_commands.guild_only()
 class MeritsSettings(app_commands.Group):
     def __init__(self):
-        super().__init__(name="merits_settings", description="Manage merits settings.")
+        super().__init__(name="meritssettings", description="Manage merits settings.")
 
 
 class Merits(commands.Cog):
