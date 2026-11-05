@@ -11,6 +11,7 @@ class MeritsDataBase(DataManager):
     async def initialize(self) -> None:
         # merit_roles data is stored as a JSON string in the database,
         # so we need to convert it to a Python object when retrieving it and back to a JSON string when storing it.
+        # it should store {str(merit_threshold): role_id}
         await self.executescript("""
             CREATE TABLE IF NOT EXISTS members (
                 guild_id INTEGER NOT NULL,

@@ -1,3 +1,4 @@
+import json
 from typing import Literal, Optional
 
 import discord
@@ -8,6 +9,12 @@ from keplerbot import Kepler, KeplerInteraction
 from utilities.checks import bot_has_permissions, has_permissions
 
 from .merits_data_manager import MeritsDataBase
+
+
+@app_commands.guild_only()
+class MeritsSettings(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="merits_settings", description="Manage merits settings.")
 
 
 class Merits(commands.Cog):
@@ -157,4 +164,53 @@ class Merits(commands.Cog):
                 f"{verb} {amount} merits {direction} **{member.name}**. "
                 f"They now have {new_merits} merits."
             ),
+        )
+
+    # ------------------------------ Settings -----------------------------------
+    merits_settings = MeritsSettings()
+
+    @merits_settings.command(
+        name="roles",
+        description="Manage adding or removing a role for a certain merit threshold.",
+    )
+    @app_commands.describe(
+        action="Whether to add/update or remove a role for a certain merit threshold.",
+        role="The role to add or remove.",
+        threshold="The merit threshold for the role.",
+    )
+    @has_permissions(manage_guild=True)
+    async def merits_settings_roles(
+        self,
+        interaction: KeplerInteraction,
+        action: Literal["add/update", "remove"],
+        role: discord.Role,
+        threshold: int,
+    ) -> None:
+        if interaction.guild.me.top_role <= role:
+            return await interaction.response_or_followup(
+                content="I cannot manage that role due to role hierarchy."
+            )
+
+        merit_roles = (await self.db.get_guild_data(interaction.guild.id))[
+            "merit_roles"
+        ]
+
+        if action == "add/update":
+            merit_roles[str(threshold)] = role.id
+            resp = "Added/updated"
+        else:
+            if str(threshold) not in merit_roles:
+                return await interaction.response_or_followup(
+                    content=f"No role found for merit threshold {threshold}."
+                )
+            merit_roles.pop(str(threshold), None)
+            resp = "Removed"
+
+        await self.db.execute(
+            "INSERT INTO guilds (guild_id, merit_roles) VALUES (?, ?) "
+            "ON CONFLICT(guild_id) DO UPDATE SET merit_roles = excluded.merit_roles",
+            (interaction.guild.id, json.dumps(merit_roles)),
+        )
+        await interaction.response_or_followup(
+            content=f"{resp} role **{role.name}** for merits threshold {threshold}."
         )
