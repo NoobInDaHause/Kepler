@@ -37,7 +37,7 @@ class MeritsDataBase(DataManager):
 
         return (
             {
-                "merit_roles": json.loads(result[2]),
+                "merit_roles": json.loads(result[1]),
             }
             if result
             else {

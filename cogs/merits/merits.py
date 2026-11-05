@@ -196,13 +196,13 @@ class Merits(commands.Cog):
                 return await interaction.response_or_followup(
                     content="You must provide a role to add/update."
                 )
-            if not role.is_assignable():
-                return await interaction.response_or_followup(
-                    content="I cannot manage that role due to role hierarchy."
-                )
             if role.is_bot_managed():
                 return await interaction.response_or_followup(
                     content="I cannot manage bot managed roles."
+                )
+            if not role.is_assignable():
+                return await interaction.response_or_followup(
+                    content="I cannot manage that role due to role hierarchy."
                 )
             merit_roles[str(threshold)] = role.id
             resp = "Added/updated"
