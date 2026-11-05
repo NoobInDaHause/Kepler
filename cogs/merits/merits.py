@@ -64,11 +64,12 @@ class Merits(commands.Cog):
     ) -> None:
         roles = []
         for threshold, role_id in merit_roles.items():
+            threshold = int(threshold)
             role = guild.get_role(role_id)
             if not role:
                 continue
 
-            should_add = action == "add" and merits >= threshold
+            should_add = action == "add" and merits >= (threshold)
             should_remove = action == "remove" and merits < threshold
             if (should_add and role not in member.roles) or (
                 should_remove and role in member.roles
