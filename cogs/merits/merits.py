@@ -39,7 +39,7 @@ class Merits(commands.Cog):
         if new_merits < 0:
             await interaction.response_or_followup(
                 content=(
-                    f"Can not remove {amount} merits from {member.mention} "
+                    f"Can not remove {amount} merits from **{member.name}** "
                     f"as they only have {current_merits} merits."
                 ),
             )
@@ -154,7 +154,7 @@ class Merits(commands.Cog):
         direction = "to" if action == "add" else "from"
         await interaction.response_or_followup(
             content=(
-                f"{verb} {amount} merits {direction} {member.mention}. "
+                f"{verb} {amount} merits {direction} **{member.name}**. "
                 f"They now have {new_merits} merits."
             ),
         )
