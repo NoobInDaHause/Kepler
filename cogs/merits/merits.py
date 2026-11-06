@@ -11,12 +11,6 @@ from utilities.checks import bot_has_permissions, has_permissions
 from .merits_data_manager import MeritsDataBase
 
 
-@app_commands.guild_only()
-class MeritsSettings(app_commands.Group):
-    def __init__(self):
-        super().__init__(name="meritssettings", description="Manage merits settings.")
-
-
 class Merits(commands.Cog):
     """
     Give merits to members.
@@ -99,10 +93,11 @@ class Merits(commands.Cog):
         )
 
     @app_commands.command(
-        name="merits", description="Show your or other member merits."
+        name="mymerits", description="Show your or other member merits."
     )
     @app_commands.describe(member="The member to show merits for.")
-    async def merits(
+    @app_commands.guild_only()
+    async def mymerits(
         self,
         interaction: KeplerInteraction,
         member: discord.Member = None,
@@ -119,15 +114,16 @@ class Merits(commands.Cog):
             content=f"Member **{member.name}** has {merits} merits.",
         )
 
-    @app_commands.command(name="merit", description="Give merits to a member.")
+    @app_commands.command(name="merits", description="Give merits to a member.")
     @app_commands.describe(
         action="Whether to add or remove merits.",
         member="The member to give merits to.",
         amount="The amount of merits to give.",
     )
+    @app_commands.guild_only()
     @has_permissions(manage_guild=True)
     @bot_has_permissions(manage_roles=True)
-    async def merit(
+    async def merits(
         self,
         interaction: KeplerInteraction,
         action: Literal["add", "remove"],
@@ -168,7 +164,9 @@ class Merits(commands.Cog):
         )
 
     # ------------------------------ Settings -----------------------------------
-    merits_settings = MeritsSettings()
+    merits_settings = app_commands.Group(
+        name="meritssettings", description="Manage merits settings.", guild_only=True
+    )
 
     @merits_settings.command(
         name="roles",
@@ -179,6 +177,7 @@ class Merits(commands.Cog):
         threshold="The merit threshold for the role.",
         role="The role to add. (Only required for add/update action.)",
     )
+    # @app_commands.guild_only()
     @has_permissions(manage_guild=True)
     async def merits_settings_roles(
         self,
@@ -197,17 +196,17 @@ class Merits(commands.Cog):
                 return await interaction.response_or_followup(
                     content="You must provide a role to add/update."
                 )
-            if interaction.user.top_role <= role:
-                return await interaction.response_or_followup(
-                    content="You cannot manage a role higher than or equal to your top role."
-                )
             if role.is_bot_managed():
                 return await interaction.response_or_followup(
                     content="I cannot manage bot managed roles."
                 )
             if not role.is_assignable():
                 return await interaction.response_or_followup(
-                    content="I cannot manage that role due to role hierarchy."
+                    content="I cannot manage that role as it is higher than or equal to my top role."
+                )
+            if interaction.user.top_role <= role:
+                return await interaction.response_or_followup(
+                    content="You cannot manage a role higher than or equal to your top role."
                 )
             merit_roles[str(threshold)] = role.id
             resp = "Added/updated"
@@ -227,3 +226,31 @@ class Merits(commands.Cog):
         await interaction.response_or_followup(
             content=f"{resp} role **{role.name}** for merits threshold {threshold}."
         )
+
+    @merits_settings.command(
+        name="view",
+        description="View the merits settings for this guild.",
+    )
+    # @app_commands.guild_only()
+    @has_permissions(manage_guild=True)
+    @bot_has_permissions(embed_links=True)
+    async def merits_settings_view(
+        self,
+        interaction: KeplerInteraction,
+    ) -> None:
+        guild_data = await self.db.get_guild_data(interaction.guild.id)
+        desc = "**Merit Roles**\n"
+        if merit_roles := guild_data["merit_roles"]:
+            for threshold, role_id in sorted(merit_roles.items(), key=lambda x: int(x[0])):
+                if role := interaction.guild.get_role(role_id):
+                    desc += f"• {threshold} merits: {role.mention}\n"
+        else:
+            desc += "No merit roles have been set for this guild."
+
+        embed = discord.Embed(
+            title="Merits Settings",
+            description=desc,
+            color=discord.Color.blurple(),
+        )
+
+        await interaction.response_or_followup(embed=embed)

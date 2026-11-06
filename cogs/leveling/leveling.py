@@ -14,15 +14,6 @@ from utilities.views import PaginatorView
 from .leveling_data_manager import LevelingDataBase
 
 
-@app_commands.guild_only()
-class LevelingSettings(app_commands.Group):
-    def __init__(self):
-        super().__init__(
-            name="levelingsettings",
-            description="Manage leveling settings for this guild.",
-        )
-
-
 class Leveling(commands.Cog):
     """
     Leveling cog.
@@ -256,7 +247,11 @@ class Leveling(commands.Cog):
         await PaginatorView(interaction, embeds).start()
 
     # ------------------------------ Settings ----------------------------------------
-    leveling_settings = LevelingSettings()
+    leveling_settings = app_commands.Group(
+        name="levelingsettings",
+        description="Manage leveling settings for this guild.",
+        guild_only=True,
+    )
 
     @leveling_settings.command(
         name="enable", description="Enable or disable leveling system for this guild."
