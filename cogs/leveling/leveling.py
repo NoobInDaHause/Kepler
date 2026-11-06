@@ -247,17 +247,17 @@ class Leveling(commands.Cog):
         await PaginatorView(interaction, embeds).start()
 
     # ------------------------------ Settings ----------------------------------------
-    leveling_settings = app_commands.Group(
+    levelingsettings = app_commands.Group(
         name="levelingsettings",
         description="Manage leveling settings for this guild.",
         guild_only=True,
     )
 
-    @leveling_settings.command(
+    @levelingsettings.command(
         name="enable", description="Enable or disable leveling system for this guild."
     )
     @has_permissions(manage_guild=True)
-    async def leveling_settings_enable(self, interaction: KeplerInteraction) -> None:
+    async def levelingsettings_enable(self, interaction: KeplerInteraction) -> None:
         guild_id = interaction.guild.id
 
         guild_data = await self.db.get_guild_data(guild_id)
@@ -277,7 +277,7 @@ class Leveling(commands.Cog):
             f"Leveling system has been {'disabled' if bool_conv else 'enabled'} for this guild."
         )
 
-    @leveling_settings.command(
+    @levelingsettings.command(
         name="levelupchannel",
         description="Set or remove the level up announcement channel.",
     )
@@ -285,7 +285,7 @@ class Leveling(commands.Cog):
     @app_commands.describe(
         channel="The channel to send level up announcements in. Leave empty to remove."
     )
-    async def leveling_settings_levelupchannel(
+    async def levelingsettings_levelupchannel(
         self, interaction: KeplerInteraction, channel: discord.TextChannel = None
     ) -> None:
         guild_id = interaction.guild.id
@@ -324,7 +324,7 @@ class Leveling(commands.Cog):
                 f"Level up announcement channel has been set to {channel.mention}.",
             )
 
-    @leveling_settings.command(
+    @levelingsettings.command(
         name="setexp", description="Set the experience range for leveling."
     )
     @has_permissions(manage_guild=True)
@@ -332,7 +332,7 @@ class Leveling(commands.Cog):
         min_exp="The minimum experience a member can gain per message. (default: 15)",
         max_exp="The maximum experience a member can gain per message. (default: 25)",
     )
-    async def leveling_settings_setexp(
+    async def levelingsettings_setexp(
         self,
         interaction: KeplerInteraction,
         min_exp: int = 15,
@@ -360,7 +360,7 @@ class Leveling(commands.Cog):
             f"Experience range has been set to {min_exp} - {max_exp}."
         )
 
-    @leveling_settings.command(
+    @levelingsettings.command(
         name="setcooldown", description="Set the cooldown for gaining experience."
     )
     @has_permissions(manage_guild=True)
@@ -369,7 +369,7 @@ class Leveling(commands.Cog):
         cd="The cooldown in seconds before a member can gain experience again. (default: 30)",
     )
     @app_commands.rename(cd="cooldown")
-    async def leveling_settings_setcooldown(
+    async def levelingsettings_setcooldown(
         self, interaction: KeplerInteraction, rate: int = 1, cd: int = 30
     ) -> None:
         guild_id = interaction.guild.id
@@ -398,7 +398,7 @@ class Leveling(commands.Cog):
             f"Cooldown for gaining experience has been set to {rate} time per {cd} seconds."
         )
 
-    @leveling_settings.command(
+    @levelingsettings.command(
         name="setthreshold", description="Set the exp needed per level."
     )
     @has_permissions(manage_guild=True)
@@ -406,7 +406,7 @@ class Leveling(commands.Cog):
         base_exp="The base exp needed to level up. (default: 100)",
         multiplier="The multiplier that multiplies the base threshold per level. (default: 1.15)",
     )
-    async def level_settings_setthreshold(
+    async def levelingsettings_setthreshold(
         self,
         interaction: KeplerInteraction,
         base_exp: int = 100,
@@ -434,12 +434,12 @@ class Leveling(commands.Cog):
             f"The base exp has been set to {base_exp} and will be multiplied by {multiplier} per level."
         )
 
-    @leveling_settings.command(
+    @levelingsettings.command(
         name="viewsettings", description="View your guild leveling settings."
     )
     @has_permissions(manage_guild=True)
     @bot_has_permissions(embed_links=True)
-    async def leveling_settings_viewsettings(
+    async def levelingsettings_viewsettings(
         self, interaction: KeplerInteraction
     ) -> None:
         guild_id = interaction.guild.id

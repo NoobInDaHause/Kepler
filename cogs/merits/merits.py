@@ -164,11 +164,11 @@ class Merits(commands.Cog):
         )
 
     # ------------------------------ Settings -----------------------------------
-    merits_settings = app_commands.Group(
+    meritssettings = app_commands.Group(
         name="meritssettings", description="Manage merits settings.", guild_only=True
     )
 
-    @merits_settings.command(
+    @meritssettings.command(
         name="roles",
         description="Manage adding or removing a role for a certain merit threshold.",
     )
@@ -178,7 +178,7 @@ class Merits(commands.Cog):
         role="The role to add. (Only required for add/update action.)",
     )
     @has_permissions(manage_guild=True)
-    async def merits_settings_roles(
+    async def meritssettings_roles(
         self,
         interaction: KeplerInteraction,
         action: Literal["add/update", "remove"],
@@ -226,13 +226,13 @@ class Merits(commands.Cog):
             content=f"{resp} role **{role.name}** for merits threshold {threshold}."
         )
 
-    @merits_settings.command(
-        name="view",
+    @meritssettings.command(
+        name="viewsettings",
         description="View the merits settings for this guild.",
     )
     @has_permissions(manage_guild=True)
     @bot_has_permissions(embed_links=True)
-    async def merits_settings_view(
+    async def meritssettings_viewsettings(
         self,
         interaction: KeplerInteraction,
     ) -> None:
@@ -248,7 +248,7 @@ class Merits(commands.Cog):
             desc += "No merit roles have been set for this guild."
 
         embed = discord.Embed(
-            title="Merits Settings",
+            title=f"Merits Settings for **{interaction.guild.name}**",
             description=desc,
             color=discord.Color.blurple(),
         )
