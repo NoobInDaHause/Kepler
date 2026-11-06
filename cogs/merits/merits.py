@@ -241,7 +241,9 @@ class Merits(commands.Cog):
         guild_data = await self.db.get_guild_data(interaction.guild.id)
         desc = "**Merit Roles**\n"
         if merit_roles := guild_data["merit_roles"]:
-            for threshold, role_id in sorted(merit_roles.items(), key=lambda x: int(x[0])):
+            for threshold, role_id in sorted(
+                merit_roles.items(), key=lambda x: int(x[0])
+            ):
                 if role := interaction.guild.get_role(role_id):
                     desc += f"• {threshold} merits: {role.mention}\n"
         else:
