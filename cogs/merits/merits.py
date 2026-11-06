@@ -117,8 +117,8 @@ class Merits(commands.Cog):
     @app_commands.command(name="merits", description="Give merits to a member.")
     @app_commands.describe(
         action="Whether to add or remove merits.",
-        member="The member to give merits to.",
-        amount="The amount of merits to give.",
+        member="The member to add/remove merits to.",
+        amount="The amount of merits to add/remove.",
     )
     @app_commands.guild_only()
     @has_permissions(manage_guild=True)
@@ -177,7 +177,6 @@ class Merits(commands.Cog):
         threshold="The merit threshold for the role.",
         role="The role to add. (Only required for add/update action.)",
     )
-    # @app_commands.guild_only()
     @has_permissions(manage_guild=True)
     async def merits_settings_roles(
         self,
@@ -231,7 +230,6 @@ class Merits(commands.Cog):
         name="view",
         description="View the merits settings for this guild.",
     )
-    # @app_commands.guild_only()
     @has_permissions(manage_guild=True)
     @bot_has_permissions(embed_links=True)
     async def merits_settings_view(
