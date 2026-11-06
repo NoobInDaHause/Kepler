@@ -97,6 +97,7 @@ class Merits(commands.Cog):
     )
     @app_commands.describe(member="The member to show merits for.")
     @app_commands.guild_only()
+    @bot_has_permissions(embed_links=True)
     async def mymerits(
         self,
         interaction: KeplerInteraction,
@@ -111,7 +112,10 @@ class Merits(commands.Cog):
         merits = member_data["merits"]
 
         await interaction.response_or_followup(
-            content=f"Member **{member.name}** has {merits} merits.",
+            embed=discord.Embed(
+                description=f"Member **{member.name}** has {merits} merits.",
+                colour=member.colour,
+            ).set_thumbnail(url=member.display_avatar.url)
         )
 
     @app_commands.command(name="merits", description="Give merits to a member.")
@@ -247,10 +251,10 @@ class Merits(commands.Cog):
         else:
             desc += "No merit roles have been set for this guild."
 
-        embed = discord.Embed(
-            title=f"Merits Settings for **{interaction.guild.name}**",
-            description=desc,
-            color=discord.Color.blurple(),
+        await interaction.response_or_followup(
+            embed=discord.Embed(
+                title=f"Merits Settings for **{interaction.guild.name}**",
+                description=desc,
+                color=self.bot.colour,
+            )
         )
-
-        await interaction.response_or_followup(embed=embed)
