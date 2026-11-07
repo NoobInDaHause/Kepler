@@ -1,5 +1,6 @@
-import orjson
 from typing import Dict, Union
+
+import orjson
 
 from utilities.data_manager import DataManager
 
