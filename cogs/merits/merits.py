@@ -1,4 +1,4 @@
-import json
+import orjson
 from typing import Literal, Optional
 
 import discord
@@ -224,7 +224,7 @@ class Merits(commands.Cog):
         await self.db.execute(
             "INSERT INTO guilds (guild_id, merit_roles) VALUES (?, ?) "
             "ON CONFLICT(guild_id) DO UPDATE SET merit_roles = excluded.merit_roles",
-            (interaction.guild.id, json.dumps(merit_roles)),
+            (interaction.guild.id, orjson.dumps(merit_roles).decode("utf-8")),
         )
         await interaction.response_or_followup(
             content=f"{resp} role **{role.name}** for merits threshold {threshold}."

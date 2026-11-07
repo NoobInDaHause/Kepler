@@ -1,4 +1,4 @@
-import json
+import orjson
 from typing import Dict, Union
 
 from utilities.data_manager import DataManager
@@ -37,7 +37,7 @@ class MeritsDataBase(DataManager):
 
         return (
             {
-                "merit_roles": json.loads(result[1]),
+                "merit_roles": orjson.loads(result[1]),
             }
             if result
             else {
