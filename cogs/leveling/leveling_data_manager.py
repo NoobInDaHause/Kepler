@@ -36,20 +36,23 @@ class LevelingDataBase(DataManager):
             );
             """)
 
-        # new in version v1.4.0
         exists = await self.check_if_column_exists(
             "guilds", "level_roles", "accumulate_level_roles"
         )
+
+        to_execute = "ALTER TABLE guilds "
+        execute_flag = False
         if not exists["level_roles"]:
-            await self.execute("""
-                ALTER TABLE guilds
-                ADD COLUMN level_roles TEXT NOT NULL DEFAULT '{}'
-                """)
+            to_execute += "ADD COLUMN level_roles TEXT NOT NULL DEFAULT '{}'"
+            execute_flag = True
         if not exists["accumulate_level_roles"]:
-            await self.execute("""
-                ALTER TABLE guilds
-                ADD COLUMN accumulate_level_roles INTEGER NOT NULL DEFAULT 0
-                """)
+            to_execute += (
+                ", ADD COLUMN accumulate_level_roles INTEGER NOT NULL DEFAULT 0"
+            )
+            execute_flag = True
+
+        if execute_flag:
+            await self.execute(to_execute)
 
     async def get_guild_data(
         self, guild_id: int
