@@ -82,3 +82,13 @@ class DataManager:
                 )
 
             await db.commit()
+
+    # new in version v1.4.0
+    async def check_if_column_exists(self, table_name: str, column_name: str) -> bool:
+        result = await self.execute(
+            f"PRAGMA table_info({table_name})",
+            select=True,
+            one_all="all",
+        )
+
+        return any(row[1] == column_name for row in result)
