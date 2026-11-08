@@ -37,8 +37,7 @@ class LevelingDataBase(DataManager):
 
         # new in version v1.4.0
         await self.execute(
-            "ALTER TABLE guilds "
-            "ADD COLUMN IF NOT EXISTS level_roles TEXT DEFAULT '{}'"
+            "ALTER TABLE guilds ADD COLUMN IF NOT EXISTS level_roles TEXT DEFAULT '{}'"
         )
 
     async def get_guild_data(
