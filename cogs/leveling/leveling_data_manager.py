@@ -1,5 +1,7 @@
 from typing import Dict, Union
 
+import orjson
+
 from utilities.data_manager import DataManager
 
 
@@ -8,6 +10,8 @@ class LevelingDataBase(DataManager):
         super().__init__(cog_name)
 
     async def initialize(self) -> None:
+        # again we will convert level_roles into JSON string.
+        # {str(level): int(role_id)}
         await self.executescript("""
             CREATE TABLE IF NOT EXISTS members (
                 guild_id INTEGER NOT NULL,
@@ -26,16 +30,24 @@ class LevelingDataBase(DataManager):
                 cooldown INTEGER NOT NULL DEFAULT 30,
                 threshold_multiplier FLOAT NOT NULL DEFAULT 1.15,
                 level_threshold INTEGER NOT NULL DEFAULT 100,
-                levelup_channel INTEGER
+                levelup_channel INTEGER,
+                level_roles TEXT DEFAULT '{}'
             );
             """)
 
-    async def get_guild_data(self, guild_id: int) -> Dict[str, Union[int, float, None]]:
+        # new in version v1.4.0
+        await self.execute(
+            "ALTER TABLE guilds "
+            "ADD COLUMN IF NOT EXISTS level_roles TEXT DEFAULT '{}'"
+        )
+
+    async def get_guild_data(
+        self, guild_id: int
+    ) -> Dict[str, Union[Dict[str, int], int, float, None]]:
         result = await self.execute(
             "SELECT * FROM guilds WHERE guild_id = ?",
             (guild_id,),
             select=True,
-            one_all="one",
         )
 
         if not result:
@@ -48,6 +60,7 @@ class LevelingDataBase(DataManager):
                 "threshold_multiplier": 1.15,
                 "level_threshold": 100,
                 "levelup_channel": None,
+                "level_roles": {},
             }
 
         return {
@@ -59,6 +72,7 @@ class LevelingDataBase(DataManager):
             "threshold_multiplier": result[6],
             "level_threshold": result[7],
             "levelup_channel": result[8],
+            "level_roles": orjson.loads(result[9]),
         }
 
     async def get_member_data(self, guild_id: int, member_id: int) -> Dict[str, int]:
@@ -66,7 +80,6 @@ class LevelingDataBase(DataManager):
             "SELECT exp, level FROM members WHERE guild_id = ? AND member_id = ?",
             (guild_id, member_id),
             select=True,
-            one_all="one",
         )
 
         if not result:

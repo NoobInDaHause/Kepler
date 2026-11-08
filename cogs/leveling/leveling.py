@@ -448,18 +448,29 @@ class Leveling(commands.Cog):
 
         desc = (
             f"Enabled: {bool(guild_data['enabled'])}\n"
-            f"Minimum exp per message: {guild_data['min_exp']}\n"
-            f"Maximum exp per message: {guild_data['max_exp']}\n"
+            f"EXP range per message: {guild_data['min_exp']} - {guild_data['max_exp']}\n"
             f"Message cooldown: {guild_data['rate']} per {guild_data['cooldown']} seconds.\n"
             f"Level threshold: base {guild_data['level_threshold']}, multiplier {guild_data['threshold_multiplier']}\n"
-            "Levelup announcement channel: "
         )
 
-        if guild_data["levelup_channel"]:
-            if chan := interaction.guild.get_channel(guild_data["levelup_channel"]):
-                desc += chan.mention
+        if c := guild_data.get("levelup_channel"):
+            if chan := interaction.guild.get_channel(c):
+                desc += f"Levelup announcement channel: {chan.mention}\n"
+            else:
+                desc += f"Levelup announcement channel: Channel not found (ID: {c})\n"
         else:
-            desc += "None"
+            desc += "Levelup announcement channel: None\n"
+
+        desc += "\nLevel roles:\n"
+
+        if level_roles := guild_data.get("level_roles"):
+            for lvl, rid in level_roles.items():
+                if role := interaction.guild.get_role(rid):
+                    desc += f"{lvl}: {role.mention}\n"
+                else:
+                    desc += f"{lvl}: Role not found (ID: {rid})\n"
+        else:
+            desc += "No level roles set.\n"
 
         embed = discord.Embed(
             title=f"Leveling settings for {interaction.guild}",
