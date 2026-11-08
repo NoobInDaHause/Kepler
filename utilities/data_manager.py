@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Literal, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import aiosqlite
 import discord
@@ -84,11 +84,17 @@ class DataManager:
             await db.commit()
 
     # new in version v1.4.0
-    async def check_if_column_exists(self, table_name: str, column_name: str) -> bool:
+    async def check_if_column_exists(
+        self, table_name: str, *column_names: str
+    ) -> Dict[str, bool]:
+
         result = await self.execute(
             f"PRAGMA table_info({table_name})",
             select=True,
             one_all="all",
         )
 
-        return any(row[1] == column_name for row in result)
+        return {
+            column_name: any(row[1] == column_name for row in result)
+            for column_name in column_names
+        }

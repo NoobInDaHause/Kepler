@@ -37,12 +37,15 @@ class LevelingDataBase(DataManager):
             """)
 
         # new in version v1.4.0
-        if not await self.check_if_column_exists("guilds", "level_roles"):
+        exists = await self.check_if_column_exists(
+            "guilds", "level_roles", "accumulate_level_roles"
+        )
+        if not exists["level_roles"]:
             await self.execute("""
                 ALTER TABLE guilds
                 ADD COLUMN level_roles TEXT NOT NULL DEFAULT '{}'
                 """)
-        if not await self.check_if_column_exists("guilds", "accumulate_level_roles"):
+        if not exists["accumulate_level_roles"]:
             await self.execute("""
                 ALTER TABLE guilds
                 ADD COLUMN accumulate_level_roles INTEGER NOT NULL DEFAULT 0
