@@ -4,9 +4,9 @@ import random
 from typing import Dict, List, Literal, Tuple
 
 import discord
+import orjson
 from discord import app_commands
 from discord.ext import commands
-import orjson
 
 from keplerbot import Kepler, KeplerInteraction
 from utilities.checks import bot_has_permissions, cooldown, has_permissions
