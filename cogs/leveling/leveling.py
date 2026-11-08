@@ -411,9 +411,7 @@ class Leveling(commands.Cog):
 
         roles = []
         if new_level != old_level:
-            roles = await self.update_member_roles(
-                interaction.guild, member, new_level
-            )
+            roles = await self.update_member_roles(interaction.guild, member, new_level)
 
         threshold = self.threshold_for_level(
             new_level,
