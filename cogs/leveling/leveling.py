@@ -44,11 +44,46 @@ class Leveling(commands.Cog):
     def threshold_for_level(level: int, base_exp: int, multiplier: float) -> int:
         return max(1, math.ceil(base_exp * (multiplier**level)))
 
+    def _apply_exp_change(
+        self,
+        level: int,
+        exp: int,
+        amount: int,
+        action: Literal["add", "remove"],
+        base_exp: int,
+        multiplier: float,
+    ) -> Tuple[int, int, int]:
+        if action == "add":
+            exp += amount
+            threshold = self.threshold_for_level(level, base_exp, multiplier)
+            while exp >= threshold:
+                exp -= threshold
+                level += 1
+                threshold = self.threshold_for_level(level, base_exp, multiplier)
+            return level, exp, amount
+
+        remaining = max(0, amount - exp)
+        exp = max(0, exp - amount)
+        while remaining > 0 and level > 0:
+            level -= 1
+            threshold = self.threshold_for_level(level, base_exp, multiplier)
+            if remaining < threshold:
+                exp = threshold - remaining
+                remaining = 0
+            else:
+                remaining -= threshold
+
+        return level, exp, amount - remaining
+
     async def cog_load(self) -> None:
         await self.db.initialize()
 
     async def announce_levelup(
-        self, message: discord.Message, old_level: int, new_level: int
+        self,
+        message: discord.Message,
+        old_level: int,
+        new_level: int,
+        roles: List[discord.Role] = None,
     ) -> None:
 
         guild_data = await self.db.get_guild_data(message.guild.id)
@@ -57,9 +92,14 @@ class Leveling(commands.Cog):
         )
 
         with contextlib.suppress(discord.errors.Forbidden):
+            description = f"**`{old_level}` -> `{new_level}`**"
+            if roles:
+                description += "\nRole earned: " + ", ".join(
+                    role.mention for role in roles
+                )
             embed = discord.Embed(
                 title="Level Up",
-                description=f"**`{old_level}` -> `{new_level}`**",
+                description=description,
                 color=self.bot.colour,
                 timestamp=discord.utils.utcnow(),
             )
@@ -70,7 +110,7 @@ class Leveling(commands.Cog):
 
     async def update_member_roles(
         self, guild: discord.Guild, member: discord.Member, new_level: int
-    ) -> None:
+    ) -> List[discord.Role]:
         guild_data = await self.db.get_guild_data(guild.id)
         level_roles = guild_data["level_roles"]
         accumulate_roles = bool(guild_data["accumulate_level_roles"])
@@ -97,7 +137,7 @@ class Leveling(commands.Cog):
             ]
             if roles_to_add:
                 await member.add_roles(*roles_to_add, reason="Level-up role update")
-            return
+            return roles_to_add
 
         highest_unlocked_level = max(
             (level for level, _ in unlocked_roles),
@@ -122,6 +162,11 @@ class Leveling(commands.Cog):
             await member.add_roles(*roles_to_add, reason="Level-up role update")
         if roles_to_remove:
             await member.remove_roles(*roles_to_remove, reason="Level-up role update")
+        return [
+            role
+            for role_id, role in configured_roles.items()
+            if role_id in desired_role_ids
+        ]
 
     @commands.Cog.listener("on_message")
     async def get_exp(self, message: discord.Message) -> None:
@@ -180,11 +225,12 @@ class Leveling(commands.Cog):
             )
 
             if now_level > old_level:
+                roles = []
                 if isinstance(message.author, discord.Member):
-                    await self.update_member_roles(
+                    roles = await self.update_member_roles(
                         message.guild, message.author, now_level
                     )
-                await self.announce_levelup(message, old_level, now_level)
+                await self.announce_levelup(message, old_level, now_level, roles)
 
     @app_commands.command(
         name="rank", description="Check your or other member level and experience."
@@ -331,62 +377,27 @@ class Leveling(commands.Cog):
         member: discord.Member,
         exp: int,
     ) -> None:
+        if exp < 0:
+            return await interaction.response_or_followup(
+                "Experience amount must be non-negative."
+            )
         if member.bot:
             return await interaction.response_or_followup(
                 content="Can not add or remove exp from bots."
             )
 
         guild_id = interaction.guild.id
-        member_id = member.id
-
         guild_data = await self.db.get_guild_data(guild_id)
-        member_data = await self.db.get_member_data(guild_id, member_id)
-
-        if exp < 0:
-            return await interaction.response_or_followup(
-                "Experience amount must be non-negative."
-            )
-
+        member_data = await self.db.get_member_data(guild_id, member.id)
         old_level = member_data["level"]
-        new_level = old_level
-        new_exp = member_data["exp"]
-
-        if act == "add":
-            new_exp += exp
-            threshold = self.threshold_for_level(
-                new_level,
-                guild_data["level_threshold"],
-                guild_data["threshold_multiplier"],
-            )
-            while new_exp >= threshold:
-                new_exp -= threshold
-                new_level += 1
-                threshold = self.threshold_for_level(
-                    new_level,
-                    guild_data["level_threshold"],
-                    guild_data["threshold_multiplier"],
-                )
-        else:
-            exp_remaining = exp
-            if exp_remaining <= new_exp:
-                new_exp -= exp_remaining
-                exp_remaining = 0
-            else:
-                exp_remaining -= new_exp
-                new_exp = 0
-
-                while exp_remaining > 0 and new_level > 0:
-                    new_level -= 1
-                    threshold = self.threshold_for_level(
-                        new_level,
-                        guild_data["level_threshold"],
-                        guild_data["threshold_multiplier"],
-                    )
-                    if exp_remaining < threshold:
-                        new_exp = threshold - exp_remaining
-                        exp_remaining = 0
-                    else:
-                        exp_remaining -= threshold
+        new_level, new_exp, adjusted_exp = self._apply_exp_change(
+            old_level,
+            member_data["exp"],
+            exp,
+            act,
+            guild_data["level_threshold"],
+            guild_data["threshold_multiplier"],
+        )
 
         await self.db.execute(
             """
@@ -395,27 +406,31 @@ class Leveling(commands.Cog):
             ON CONFLICT (guild_id, member_id)
             DO UPDATE SET exp = excluded.exp, level = excluded.level
             """,
-            (guild_id, member_id, new_exp, new_level),
+            (guild_id, member.id, new_exp, new_level),
         )
 
+        roles = []
         if new_level != old_level:
-            await self.update_member_roles(interaction.guild, member, new_level)
+            roles = await self.update_member_roles(
+                interaction.guild, member, new_level
+            )
 
         threshold = self.threshold_for_level(
             new_level,
             guild_data["level_threshold"],
             guild_data["threshold_multiplier"],
         )
-        if act == "add":
-            response = f"Added {exp} EXP to {member.mention}."
-        else:
-            removed_exp = exp - exp_remaining
-            response = f"Removed {removed_exp} EXP from {member.mention}."
-
-        response += (
+        action_text = "Added" if act == "add" else "Removed"
+        response = (
+            f"{action_text} {adjusted_exp} EXP "
+            f"{'to' if act == 'add' else 'from'} {member.mention}."
             f" They are now level {new_level} with {new_exp}/{threshold} EXP "
             "toward the next level."
         )
+        if roles:
+            response += " Level roles updated: " + ", ".join(
+                role.mention for role in roles
+            )
         await interaction.response_or_followup(response)
 
     @levelingsettings.command(
