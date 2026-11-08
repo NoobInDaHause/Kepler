@@ -1,11 +1,12 @@
 import contextlib
 import math
 import random
-from typing import Dict, Literal
+from typing import Dict, List, Literal, Tuple
 
 import discord
 from discord import app_commands
 from discord.ext import commands
+import orjson
 
 from keplerbot import Kepler, KeplerInteraction
 from utilities.checks import bot_has_permissions, cooldown, has_permissions
@@ -67,6 +68,61 @@ class Leveling(commands.Cog):
                 content=f"Congratulations {message.author.mention}!", embed=embed
             )
 
+    async def update_member_roles(
+        self, guild: discord.Guild, member: discord.Member, new_level: int
+    ) -> None:
+        guild_data = await self.db.get_guild_data(guild.id)
+        level_roles = guild_data["level_roles"]
+        accumulate_roles = bool(guild_data["accumulate_level_roles"])
+
+        configured_roles = {
+            role.id: role
+            for role_id in level_roles.values()
+            if (role := guild.get_role(role_id)) is not None
+        }
+        unlocked_roles: List[Tuple[int, discord.Role]] = []
+        for level, role_id in level_roles.items():
+            if int(level) <= new_level:
+                if (role := guild.get_role(role_id)) is not None:
+                    unlocked_roles.append((int(level), role))
+
+        unlocked_role_ids = {role.id for _, role in unlocked_roles}
+        if accumulate_roles:
+            member_role_ids = {role.id for role in member.roles}
+            roles_to_add = [
+                role
+                for role_id, role in configured_roles.items()
+                if role_id in unlocked_role_ids
+                if role_id not in member_role_ids
+            ]
+            if roles_to_add:
+                await member.add_roles(*roles_to_add, reason="Level-up role update")
+            return
+
+        highest_unlocked_level = max(
+            (level for level, _ in unlocked_roles),
+            default=None,
+        )
+        desired_role_ids = {
+            role.id for level, role in unlocked_roles if level == highest_unlocked_level
+        }
+        member_role_ids = {role.id for role in member.roles}
+        roles_to_add = [
+            role
+            for role_id, role in configured_roles.items()
+            if role_id in desired_role_ids and role_id not in member_role_ids
+        ]
+        roles_to_remove = [
+            role
+            for role_id, role in configured_roles.items()
+            if role_id in member_role_ids and role_id not in desired_role_ids
+        ]
+
+        if roles_to_add:
+            await member.add_roles(*roles_to_add, reason="Level-up role update")
+        if roles_to_remove:
+            await member.remove_roles(*roles_to_remove, reason="Level-up role update")
+
     @commands.Cog.listener("on_message")
     async def get_exp(self, message: discord.Message) -> None:
         if message.author.bot or message.guild is None:
@@ -124,6 +180,10 @@ class Leveling(commands.Cog):
             )
 
             if now_level > old_level:
+                if isinstance(message.author, discord.Member):
+                    await self.update_member_roles(
+                        message.guild, message.author, now_level
+                    )
                 await self.announce_levelup(message, old_level, now_level)
 
     @app_commands.command(
@@ -252,6 +312,111 @@ class Leveling(commands.Cog):
         description="Manage leveling settings for this guild.",
         guild_only=True,
     )
+
+    @levelingsettings.command(
+        name="alterexp",
+        description="Add or remove experience from a member.",
+    )
+    @has_permissions(manage_guild=True)
+    @app_commands.describe(
+        act="Add or remove experience from a member.",
+        member="The target member.",
+        exp="The amount of experience to add or remove.",
+    )
+    @app_commands.rename(act="action")
+    async def alterexp(
+        self,
+        interaction: KeplerInteraction,
+        act: Literal["add", "remove"],
+        member: discord.Member,
+        exp: int,
+    ) -> None:
+        if member.bot:
+            return await interaction.response_or_followup(
+                content="Can not add or remove exp from bots."
+            )
+
+        guild_id = interaction.guild.id
+        member_id = member.id
+
+        guild_data = await self.db.get_guild_data(guild_id)
+        member_data = await self.db.get_member_data(guild_id, member_id)
+
+        if exp < 0:
+            return await interaction.response_or_followup(
+                "Experience amount must be non-negative."
+            )
+
+        old_level = member_data["level"]
+        new_level = old_level
+        new_exp = member_data["exp"]
+
+        if act == "add":
+            new_exp += exp
+            threshold = self.threshold_for_level(
+                new_level,
+                guild_data["level_threshold"],
+                guild_data["threshold_multiplier"],
+            )
+            while new_exp >= threshold:
+                new_exp -= threshold
+                new_level += 1
+                threshold = self.threshold_for_level(
+                    new_level,
+                    guild_data["level_threshold"],
+                    guild_data["threshold_multiplier"],
+                )
+        else:
+            exp_remaining = exp
+            if exp_remaining <= new_exp:
+                new_exp -= exp_remaining
+                exp_remaining = 0
+            else:
+                exp_remaining -= new_exp
+                new_exp = 0
+
+                while exp_remaining > 0 and new_level > 0:
+                    new_level -= 1
+                    threshold = self.threshold_for_level(
+                        new_level,
+                        guild_data["level_threshold"],
+                        guild_data["threshold_multiplier"],
+                    )
+                    if exp_remaining < threshold:
+                        new_exp = threshold - exp_remaining
+                        exp_remaining = 0
+                    else:
+                        exp_remaining -= threshold
+
+        await self.db.execute(
+            """
+            INSERT INTO members (guild_id, member_id, exp, level)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT (guild_id, member_id)
+            DO UPDATE SET exp = excluded.exp, level = excluded.level
+            """,
+            (guild_id, member_id, new_exp, new_level),
+        )
+
+        if new_level != old_level:
+            await self.update_member_roles(interaction.guild, member, new_level)
+
+        threshold = self.threshold_for_level(
+            new_level,
+            guild_data["level_threshold"],
+            guild_data["threshold_multiplier"],
+        )
+        if act == "add":
+            response = f"Added {exp} EXP to {member.mention}."
+        else:
+            removed_exp = exp - exp_remaining
+            response = f"Removed {removed_exp} EXP from {member.mention}."
+
+        response += (
+            f" They are now level {new_level} with {new_exp}/{threshold} EXP "
+            "toward the next level."
+        )
+        await interaction.response_or_followup(response)
 
     @levelingsettings.command(
         name="enable", description="Enable or disable leveling system for this guild."
@@ -435,6 +600,89 @@ class Leveling(commands.Cog):
         )
 
     @levelingsettings.command(
+        name="setlevelrole", description="Add/update/remove a role to a certain level."
+    )
+    @has_permissions(manage_guild=True)
+    @app_commands.describe(
+        action="Add/update or remove a role for a certain level.",
+        level="The level to assign the role to.",
+        role="The role to assign to the level. (Only for add/update)",
+    )
+    async def levelingsettings_setlevelrole(
+        self,
+        interaction: KeplerInteraction,
+        action: Literal["add/update", "remove"],
+        level: int,
+        role: discord.Role = None,
+    ) -> None:
+        level_roles = (await self.db.get_guild_data(interaction.guild.id))[
+            "level_roles"
+        ]
+
+        if action == "add/update":
+            if not role:
+                return await interaction.response_or_followup(
+                    content="You must provide a role to add/update."
+                )
+            if role.is_bot_managed():
+                return await interaction.response_or_followup(
+                    content="I cannot manage bot managed roles."
+                )
+            if not role.is_assignable():
+                return await interaction.response_or_followup(
+                    content="I cannot manage that role as it is higher than or equal to my top role."
+                )
+            if interaction.user.top_role <= role:
+                return await interaction.response_or_followup(
+                    content="You cannot manage a role higher than or equal to your top role."
+                )
+            level_roles[str(level)] = role.id
+            resp = "Added/updated"
+        else:
+            if str(level) not in level_roles:
+                return await interaction.response_or_followup(
+                    content=f"No role found for level {level}."
+                )
+            level_roles.pop(str(level), None)
+            resp = "Removed"
+
+        await self.db.execute(
+            "INSERT INTO guilds (guild_id, level_roles) VALUES (?, ?) "
+            "ON CONFLICT(guild_id) DO UPDATE SET level_roles = excluded.level_roles",
+            (interaction.guild.id, orjson.dumps(level_roles).decode("utf-8")),
+        )
+        await interaction.response_or_followup(
+            content=f"{resp} role **{role.name}** for level {level}."
+        )
+
+    @levelingsettings.command(
+        name="setroleaccumulation",
+        description="Set whether to accumulate or replace roles for levels.",
+    )
+    @has_permissions(manage_guild=True)
+    async def levelingsettings_setroleaccumulation(
+        self, interaction: KeplerInteraction
+    ) -> None:
+        guild_id = interaction.guild.id
+
+        guild_data = await self.db.get_guild_data(guild_id)
+        bool_conv = bool(guild_data["accumulate_level_roles"])
+
+        await self.db.execute(
+            """
+            INSERT INTO guilds (guild_id, accumulate_level_roles)
+            VALUES (?, ?)
+            ON CONFLICT (guild_id)
+            DO UPDATE SET accumulate_level_roles = excluded.accumulate_level_roles
+            """,
+            (guild_id, int(not bool_conv)),
+        )
+
+        await interaction.response_or_followup(
+            f"Roles will now be {'accumulated' if bool_conv else 'replaced'} for levels."
+        )
+
+    @levelingsettings.command(
         name="viewsettings", description="View your guild leveling settings."
     )
     @has_permissions(manage_guild=True)
@@ -461,7 +709,7 @@ class Leveling(commands.Cog):
         else:
             desc += "Levelup announcement channel: None\n"
 
-        desc += "\nLevel roles:\n"
+        desc += "Level roles:\n"
 
         if level_roles := guild_data.get("level_roles"):
             for lvl, rid in level_roles.items():
@@ -472,6 +720,8 @@ class Leveling(commands.Cog):
         else:
             desc += "No level roles set.\n"
 
+        desc += f"Accumulate/replace level roles: {'Accumulate' if guild_data.get('accumulate_level_roles') else 'Replace'}\n"
+
         embed = discord.Embed(
             title=f"Leveling settings for {interaction.guild}",
             description=desc,
@@ -481,106 +731,3 @@ class Leveling(commands.Cog):
         embed.set_thumbnail(url=interaction.guild.icon)
 
         await interaction.response_or_followup(embed=embed)
-
-    @app_commands.command(
-        name="setexp",
-        description="Add or remove experience from a member.",
-    )
-    @app_commands.guild_only()
-    @has_permissions(manage_guild=True)
-    @app_commands.describe(
-        act="Add or remove experience from a member.",
-        member="The target member.",
-        exp="The amount of experience to add or remove.",
-    )
-    @app_commands.rename(act="action")
-    async def setexp(
-        self,
-        interaction: KeplerInteraction,
-        act: Literal["add", "remove"],
-        member: discord.Member,
-        exp: int,
-    ) -> None:
-        if member.bot:
-            return await interaction.response_or_followup(
-                content="Can not add or remove exp from bots."
-            )
-
-        guild_id = interaction.guild.id
-        member_id = member.id
-
-        guild_data = await self.db.get_guild_data(guild_id)
-        member_data = await self.db.get_member_data(guild_id, member_id)
-
-        if exp < 0:
-            return await interaction.response_or_followup(
-                "Experience amount must be non-negative."
-            )
-
-        old_level = member_data["level"]
-        new_level = old_level
-        new_exp = member_data["exp"]
-
-        if act == "add":
-            new_exp += exp
-            threshold = self.threshold_for_level(
-                new_level,
-                guild_data["level_threshold"],
-                guild_data["threshold_multiplier"],
-            )
-            while new_exp >= threshold:
-                new_exp -= threshold
-                new_level += 1
-                threshold = self.threshold_for_level(
-                    new_level,
-                    guild_data["level_threshold"],
-                    guild_data["threshold_multiplier"],
-                )
-        else:
-            exp_remaining = exp
-            if exp_remaining <= new_exp:
-                new_exp -= exp_remaining
-                exp_remaining = 0
-            else:
-                exp_remaining -= new_exp
-                new_exp = 0
-
-                while exp_remaining > 0 and new_level > 0:
-                    new_level -= 1
-                    threshold = self.threshold_for_level(
-                        new_level,
-                        guild_data["level_threshold"],
-                        guild_data["threshold_multiplier"],
-                    )
-                    if exp_remaining < threshold:
-                        new_exp = threshold - exp_remaining
-                        exp_remaining = 0
-                    else:
-                        exp_remaining -= threshold
-
-        await self.db.execute(
-            """
-            INSERT INTO members (guild_id, member_id, exp, level)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT (guild_id, member_id)
-            DO UPDATE SET exp = excluded.exp, level = excluded.level
-            """,
-            (guild_id, member_id, new_exp, new_level),
-        )
-
-        threshold = self.threshold_for_level(
-            new_level,
-            guild_data["level_threshold"],
-            guild_data["threshold_multiplier"],
-        )
-        if act == "add":
-            response = f"Added {exp} EXP to {member.mention}."
-        else:
-            removed_exp = exp - exp_remaining
-            response = f"Removed {removed_exp} EXP from {member.mention}."
-
-        response += (
-            f" They are now level {new_level} with {new_exp}/{threshold} EXP "
-            "toward the next level."
-        )
-        await interaction.response_or_followup(response)

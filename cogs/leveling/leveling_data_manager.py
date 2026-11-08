@@ -31,15 +31,22 @@ class LevelingDataBase(DataManager):
                 threshold_multiplier FLOAT NOT NULL DEFAULT 1.15,
                 level_threshold INTEGER NOT NULL DEFAULT 100,
                 levelup_channel INTEGER,
-                level_roles TEXT DEFAULT '{}'
+                level_roles TEXT NOT NULL DEFAULT '{}',
+                accumulate_level_roles INTEGER NOT NULL DEFAULT 0
             );
             """)
 
         # new in version v1.4.0
         if not await self.check_if_column_exists("guilds", "level_roles"):
-            await self.execute(
-                "ALTER TABLE guilds ADD COLUMN level_roles TEXT DEFAULT '{}'"
-            )
+            await self.execute("""
+                ALTER TABLE guilds
+                ADD COLUMN level_roles TEXT NOT NULL DEFAULT '{}'
+                """)
+        if not await self.check_if_column_exists("guilds", "accumulate_level_roles"):
+            await self.execute("""
+                ALTER TABLE guilds
+                ADD COLUMN accumulate_level_roles INTEGER NOT NULL DEFAULT 0
+                """)
 
     async def get_guild_data(
         self, guild_id: int
@@ -61,6 +68,7 @@ class LevelingDataBase(DataManager):
                 "level_threshold": 100,
                 "levelup_channel": None,
                 "level_roles": {},
+                "accumulate_level_roles": 0,
             }
 
         return {
@@ -73,6 +81,7 @@ class LevelingDataBase(DataManager):
             "level_threshold": result[7],
             "levelup_channel": result[8],
             "level_roles": orjson.loads(result[9]),
+            "accumulate_level_roles": result[10],
         }
 
     async def get_member_data(self, guild_id: int, member_id: int) -> Dict[str, int]:
