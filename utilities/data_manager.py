@@ -97,6 +97,5 @@ class DataManager:
         existing_columns = [row[1] for row in result]
 
         return {
-            column_name: column_name in existing_columns
-            for column_name in column_names
+            column_name: column_name in existing_columns for column_name in column_names
         }
