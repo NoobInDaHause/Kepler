@@ -269,6 +269,73 @@ class Moderation(commands.GroupCog, group_name="moderation"):
                     )
                 break
 
+    @commands.Cog.listener("on_message")
+    async def honeypot_listener(self, message: discord.Message) -> None:
+        if not message.guild:
+            return
+        if (
+            message.guild.owner.id == message.author.id
+            or message.author.guild_permissions.manage_guild
+            or message.author.guild_permissions.administrator
+        ):
+            return
+
+        hs = await self.db.get_honeypot_settings(message.guild.id)
+
+        if not hs["enabled"]:
+            return
+
+        if message.channel.id not in hs["channel_ids"]:
+            return
+
+        logchannel = message.guild.get_channel(hs["logchannel_id"])
+
+        match hs["action"]:
+            case "kick":
+                try:
+                    await message.author.kick(reason="Honeypot triggered.")
+                    act = "kicked"
+                except discord.errors.Forbidden:
+                    if logchannel:
+                        await logchannel.send(
+                            content=f"Could not kick {message.author}! I may lack permission, or "
+                            "the members top role is higher or equal to mine"
+                        )
+                    return
+                except discord.errors.HTTPException:
+                    if logchannel:
+                        await logchannel.send(
+                            content=f"Something went wrong while trying to kick {message.author}! "
+                            "Could be network issue on my end or discord is bugging."
+                        )
+                    return
+            case "ban":
+                try:
+                    await message.author.ban(reason="Honeypot triggered.")
+                    act = "banned"
+                except discord.errors.Forbidden:
+                    if logchannel:
+                        await logchannel.send(
+                            content=f"Could not ban {message.author}! I may lack permission, or "
+                            "the members top role is higher or equal to mine"
+                        )
+                    return
+                except discord.errors.HTTPException:
+                    if logchannel:
+                        await logchannel.send(
+                            content=f"Something went wrong while trying to ban {message.author}! "
+                            "Could be network issue on my end or discord is bugging."
+                        )
+                    return
+
+        if logchannel:
+            await logchannel.send(
+                content=f"**{message.author}** has been {act} for triggering the honeypot."
+            )
+
+        with contextlib.suppress(discord.errors.Forbidden):
+            await message.delete()
+
     async def init_tempbans(self) -> None:
         await self.bot.wait_until_ready()
 

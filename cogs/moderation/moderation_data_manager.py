@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Union
 
 import discord
 
@@ -49,8 +49,10 @@ class ModerationDataBase(DataManager):
 
             CREATE TABLE IF NOT EXISTS honeypot_settings (
                 guild_id INTEGER PRIMARY KEY NOT NULL,
+                enabled INTEGER NOT NULL DEFAULT 0,
                 channel_ids TEXT NOT NULL,
-                action TEXT NOT NULL DEFAULT 
+                action TEXT NOT NULL DEFAULT 'kick',
+                logchannel_id INTEGER
             )
             """)
 
@@ -284,4 +286,26 @@ class ModerationDataBase(DataManager):
         )
 
     # ------------------------------------- honeypot ----------------------------------------
-    async def get_honeypot_settings(self) -> None: ...
+    async def get_honeypot_settings(
+        self, guild_id: int
+    ) -> Dict[str, Union[List[int], str, int]]:
+        result = await self.execute(
+            "SELECT * FROM honeypot_settings WHERE guild_id = ?",
+            (guild_id,),
+            select=True,
+        )
+
+        if not result:
+            return {
+                "enabled": False,
+                "channel_ids": [],
+                "action": "kick",
+                "logchannel_id": None,
+            }
+
+        return {
+            "enabled": bool(result[1]),
+            "channel_ids": [int(chan_id) for chan_id in result[2].split(",")],
+            "action": result[3],
+            "logchannel_id": result[4],
+        }
