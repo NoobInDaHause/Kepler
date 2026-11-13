@@ -19,6 +19,7 @@ from utilities.views import PaginatorView
 from .moderation_data_manager import ModerationDataBase
 from .objects import TempbanObject
 from .utils import get_auditlog_reason, get_dm_embed, get_modlog_embed, hierarchy_check
+from .views import HoneyPotSettingsView
 
 
 @app_commands.guild_only()
@@ -718,39 +719,50 @@ class Moderation(commands.GroupCog, group_name="moderation"):
         guild_id = interaction.guild.id
         existing = await self.db.modlog_channel("get", guild_id)
 
-        if action == "set":
-            if channel is None:
-                return await interaction.response_or_followup(
-                    content="Channel is required to set modlog."
+        match action:
+            case "set":
+                if not channel:
+                    return await interaction.response_or_followup(
+                        content="Channel is required to set modlog."
+                    )
+                if not channel.permissions_for(interaction.guild.me).send_messages:
+                    return await interaction.response_or_followup(
+                        content=f"I cannot send messages to {channel.mention}. Please check my permissions."
+                    )
+
+                await self.db.modlog_channel(
+                    "update" if existing else "insert",
+                    guild_id,
+                    channel.id,
                 )
-            if not channel.permissions_for(interaction.guild.me).send_messages:
                 return await interaction.response_or_followup(
-                    content=f"I cannot send messages to {channel.mention}. Please check my permissions."
+                    content=f"{channel.mention} has been set as the modlog channel."
                 )
 
-            await self.db.modlog_channel(
-                "update" if existing else "insert",
-                guild_id,
-                channel.id,
-            )
-            return await interaction.response_or_followup(
-                content=f"{channel.mention} has been set as the modlog channel."
-            )
-
-        if action == "remove":
-            if not existing:
+            case "remove":
+                if not existing:
+                    return await interaction.response_or_followup(
+                        content="There is no modlog channel currently set to remove."
+                    )
+                await self.db.modlog_channel("delete", guild_id)
                 return await interaction.response_or_followup(
-                    content="There is no modlog channel currently set to remove."
+                    content="The modlog channel has been cleared."
                 )
-            await self.db.modlog_channel("delete", guild_id)
-            return await interaction.response_or_followup(
-                content="The modlog channel has been cleared."
-            )
 
-        if existing:
-            return await interaction.response_or_followup(
-                content=f"<#{existing[0][0]}> is the set modlog channel."
-            )
-        return await interaction.response_or_followup(
-            content="No modlog channel has been set."
-        )
+            case "view":
+                if existing:
+                    return await interaction.response_or_followup(
+                        content=f"<#{existing[0][0]}> is the set modlog channel."
+                    )
+                return await interaction.response_or_followup(
+                    content="No modlog channel has been set."
+                )
+
+    @app_commands.command(name="honeypot", description="Configure honeypot settings.")
+    @has_permissions(manage_guild=True)
+    @bot_has_permissions(embed_links=True)
+    async def moderation_honeypot(
+        self,
+        interaction: KeplerInteraction,
+    ) -> None:
+        await HoneyPotSettingsView(interaction).start()

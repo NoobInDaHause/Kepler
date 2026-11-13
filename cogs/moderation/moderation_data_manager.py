@@ -11,6 +11,8 @@ class ModerationDataBase(DataManager):
 
     # -------------------------------------------- tempbans -------------------------------------------------------
     async def initialize(self) -> None:
+        # for the honeypot channel_ids we will store the ids as string joined with ","
+        # then split when retreiving
         await self.executescript("""
             CREATE TABLE IF NOT EXISTS tempbans (
                 guild_id INTEGER NOT NULL,
@@ -44,6 +46,12 @@ class ModerationDataBase(DataManager):
                 until INTEGER,
                 PRIMARY KEY (guild_id, case_id)
             );
+
+            CREATE TABLE IF NOT EXISTS honeypot_settings (
+                guild_id INTEGER PRIMARY KEY NOT NULL,
+                channel_ids TEXT NOT NULL,
+                action TEXT NOT NULL DEFAULT 
+            )
             """)
 
     async def insert_tempban(
@@ -274,3 +282,7 @@ class ModerationDataBase(DataManager):
             select=True,
             one_all="all",
         )
+
+    # ------------------------------------- honeypot ----------------------------------------
+    async def get_honeypot_settings(self) -> None:
+        ...
