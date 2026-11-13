@@ -284,5 +284,4 @@ class ModerationDataBase(DataManager):
         )
 
     # ------------------------------------- honeypot ----------------------------------------
-    async def get_honeypot_settings(self) -> None:
-        ...
+    async def get_honeypot_settings(self) -> None: ...

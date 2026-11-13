@@ -17,10 +17,12 @@ class HoneyPotSettingsView(discord.ui.View):
 
     async def start(self) -> None:
         cog: Moderation = self.interaction.client.get_cog("Moderation")
-        
+
         embed = discord.Embed(
             title=f"{self.interaction.guild}'s auto ban settings.",
             description="",
             colour=self.interaction.client.colour,
         )
-        self.message = await self.interaction.response_or_followup(embed=embed, view=self)
+        self.message = await self.interaction.response_or_followup(
+            embed=embed, view=self
+        )
