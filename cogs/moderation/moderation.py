@@ -300,18 +300,18 @@ class Moderation(commands.GroupCog, group_name="moderation"):
                     )
                     await message.author.kick(reason="Honeypot triggered.")
                     act = "kicked"
-                except discord.errors.Forbidden:
+                except (discord.errors.Forbidden, discord.errors.HTTPException) as err:
                     if logchannel:
                         await logchannel.send(
-                            content=f"Could not kick {message.author}! I may lack permission, or "
-                            "the members top role is higher or equal to mine."
-                        )
-                    return
-                except discord.errors.HTTPException:
-                    if logchannel:
-                        await logchannel.send(
-                            content=f"Something went wrong while trying to kick {message.author}! "
-                            "Could be network issue on my end or discord is bugging."
+                            content=(
+                                f"Could not kick {message.author}! I may lack permission, or "
+                                "the members top role is higher or equal to mine."
+                                if isinstance(err, discord.errors.Forbidden)
+                                else (
+                                    f"Something went wrong while trying to kick {message.author}! "
+                                    "Could be network issue on my end or discord is bugging."
+                                )
+                            )
                         )
                     return
             case "ban":
@@ -321,18 +321,21 @@ class Moderation(commands.GroupCog, group_name="moderation"):
                     )
                     await message.author.ban(reason="Honeypot triggered.")
                     act = "banned"
-                except discord.errors.Forbidden:
+                except (
+                    discord.errors.Forbidden,
+                    discord.errors.HTTPException,
+                ) as err:
                     if logchannel:
                         await logchannel.send(
-                            content=f"Could not ban {message.author}! I may lack permission, or "
-                            "the members top role is higher or equal to mine."
-                        )
-                    return
-                except discord.errors.HTTPException:
-                    if logchannel:
-                        await logchannel.send(
-                            content=f"Something went wrong while trying to ban {message.author}! "
-                            "Could be network issue on my end or discord is bugging."
+                            content=(
+                                f"Could not ban {message.author}! I may lack permission, or "
+                                "the members top role is higher or equal to mine."
+                                if isinstance(err, discord.errors.Forbidden)
+                                else (
+                                    f"Something went wrong while trying to ban {message.author}! "
+                                    "Could be network issue on my end or discord is bugging."
+                                )
+                            )
                         )
                     return
 
