@@ -171,24 +171,39 @@ class HoneyPotSettingsView(discord.ui.View):
             await init_msg.delete(delay=5.0)
             return
 
+        if ans.content.lower() == "none":
+            await init_msg.delete()
+            await ans.delete()
+            await self.cog.db.execute(
+                """
+                INSERT INTO honeypot_settings (guild_id, logchannel_id)
+                VALUES (?, ?)
+                ON CONFLICT(guild_id) DO UPDATE SET logchannel_id = excluded.logchannel_id
+                """,
+                (interaction.guild.id, None),
+            )
+            embed = await self.get_hp_embed()
+            await interaction.message.edit(embed=embed, view=self)
+            return
+
         try:
             channel = await commands.TextChannelConverter().convert(
                 await interaction.client.get_context(self.interaction), ans.content
             )
         except commands.BadArgument:
-            await init_msg.edit(content="That does not seem to be a valid channel.")
+            await init_msg.edit(
+                content="That does not seem to be a valid text channel."
+            )
             await init_msg.delete(delay=5.0)
+            await ans.delete()
             return
 
         if not channel:
-            await init_msg.edit(content="That does not seem to be a valid channel.")
-            await init_msg.delete(delay=5.0)
-            return
-        if not isinstance(channel, discord.TextChannel):
             await init_msg.edit(
-                content="You can only set a TextChannel for the log channel."
+                content="That does not seem to be a valid text channel."
             )
             await init_msg.delete(delay=5.0)
+            await ans.delete()
             return
         if (
             not channel.permissions_for(interaction.guild.me).send_messages
@@ -198,8 +213,11 @@ class HoneyPotSettingsView(discord.ui.View):
                 content="I can not seem to view or send messages in that channel."
             )
             await init_msg.delete(delay=5.0)
+            await ans.delete()
             return
 
+        await init_msg.delete()
+        await ans.delete()
         await self.cog.db.execute(
             """
             INSERT INTO honeypot_settings (guild_id, logchannel_id)
