@@ -184,6 +184,21 @@ class HoneyPotSettingsView(discord.ui.View):
             await init_msg.edit(content="That does not seem to be a valid channel.")
             await init_msg.delete(delay=5.0)
             return
+        if not isinstance(channel, discord.TextChannel):
+            await init_msg.edit(
+                content="You can only set a TextChannel for the log channel."
+            )
+            await init_msg.delete(delay=5.0)
+            return
+        if (
+            not channel.permissions_for(interaction.guild.me).send_messages
+            or not channel.permissions_for(interaction.guild.me).view_channel
+        ):
+            await init_msg.edit(
+                content="I can not seem to view or send messages in that channel."
+            )
+            await init_msg.delete(delay=5.0)
+            return
 
         await self.cog.db.execute(
             """
