@@ -54,7 +54,9 @@ class HoneyPotSettingsView(discord.ui.View):
         )
 
     async def start(self) -> None:
-        enabled = await self.cog.db.get_honeypot_settings(self.interaction.guild.id)["enabled"]
+        enabled = await self.cog.db.get_honeypot_settings(self.interaction.guild.id)[
+            "enabled"
+        ]
 
         self.enable_honeypot_button.label = "Enabled" if enabled else "Disabled"
         self.enable_honeypot_button.style = (
