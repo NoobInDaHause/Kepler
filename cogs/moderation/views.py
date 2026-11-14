@@ -161,11 +161,13 @@ class HoneyPotSettingsView(discord.ui.View):
         )
 
         try:
-            ans = await self.cog.bot.wait_for("message", check=lambda x: x.author.id == interaction.user.id, timeout=30.0)
-        except asyncio.TimeoutError:
-            await init_msg.edit(
-                content="You took too long to respond."
+            ans = await self.cog.bot.wait_for(
+                "message",
+                check=lambda x: x.author.id == interaction.user.id,
+                timeout=30.0,
             )
+        except asyncio.TimeoutError:
+            await init_msg.edit(content="You took too long to respond.")
             await init_msg.delete(delay=5.0)
             return
 
@@ -174,16 +176,12 @@ class HoneyPotSettingsView(discord.ui.View):
                 await interaction.client.get_context(interaction), ans
             )
         except commands.BadArgument:
-            await init_msg.edit(
-                content="That does not seem to be a valid channel."
-            )
+            await init_msg.edit(content="That does not seem to be a valid channel.")
             await init_msg.delete(delay=5.0)
             return
 
         if not channel:
-            await init_msg.edit(
-                content="That does not seem to be a valid channel."
-            )
+            await init_msg.edit(content="That does not seem to be a valid channel.")
             await init_msg.delete(delay=5.0)
             return
 
