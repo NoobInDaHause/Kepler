@@ -271,7 +271,7 @@ class Moderation(commands.GroupCog, group_name="moderation"):
 
     @commands.Cog.listener("on_message")
     async def honeypot_listener(self, message: discord.Message) -> None:
-        if not message.guild:
+        if not message.guild or message.author.bot:
             return
         if (
             message.guild.owner.id == message.author.id
