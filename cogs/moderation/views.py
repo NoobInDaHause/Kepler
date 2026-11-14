@@ -35,7 +35,7 @@ class HoneyPotSettingsView(discord.ui.View):
         else:
             desc += "None\n"
 
-        desc += f"Action: {hs['action']}\n"
+        desc += f"Action: **{hs['action']}**\n"
 
         lcid = hs["logchannel_id"]
         if lcid is None:
@@ -54,13 +54,17 @@ class HoneyPotSettingsView(discord.ui.View):
         )
 
     async def start(self) -> None:
-        enabled = (await self.cog.db.get_honeypot_settings(self.interaction.guild.id))[
-            "enabled"
-        ]
+        hs = await self.cog.db.get_honeypot_settings(self.interaction.guild.id)
 
-        self.enable_honeypot_button.label = "Enabled" if enabled else "Disabled"
+        self.enable_honeypot_button.label = "Enabled" if hs["enabled"] else "Disabled"
         self.enable_honeypot_button.style = (
-            discord.ButtonStyle.success if enabled else discord.ButtonStyle.danger
+            discord.ButtonStyle.success if hs["enabled"] else discord.ButtonStyle.danger
+        )
+        self.action_button.emoji = "👢" if hs["action"] == "kick" else "🔨"
+        self.action_button.style = (
+            discord.ButtonStyle.grey
+            if hs["action"] == "kick"
+            else discord.ButtonStyle.danger
         )
 
         embed = await self.get_hp_embed()
@@ -102,6 +106,43 @@ class HoneyPotSettingsView(discord.ui.View):
         button.label = "Enabled" if enabled else "Disabled"
         button.style = (
             discord.ButtonStyle.success if enabled else discord.ButtonStyle.danger
+        )
+
+        embed = await self.get_hp_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="Set HoneyPot Channels", style=discord.ButtonStyle.grey)
+    async def sethoneypotchannels_button(
+        self,
+        interaction: KeplerInteraction,
+        button: discord.ui.Button["HoneyPotSettingsView"],
+    ) -> None:
+        # too lazy for now
+        await interaction.response.defer()
+
+    @discord.ui.button(label="Action", style=discord.ButtonStyle.grey, emoji="👢")
+    async def action_button(
+        self,
+        interaction: KeplerInteraction,
+        button: discord.ui.Button["HoneyPotSettingsView"],
+    ) -> None:
+        hs = (await self.cog.db.get_honeypot_settings(interaction.guild.id))["action"]
+
+        new_act = "ban" if hs == "kick" else "kick"
+        button.emoji = "👢" if new_act == "kick" else "🔨"
+        button.style = (
+            discord.ButtonStyle.grey
+            if new_act == "kick"
+            else discord.ButtonStyle.danger
+        )
+
+        await self.cog.db.execute(
+            """
+            INSERT INTO honeypot_settings (guild_id, action)
+            VALUES (?, ?)
+            ON CONFLICT(guild_id) DO UPDATE SET action = excluded.action
+            """,
+            (interaction.guild.id, new_act),
         )
 
         embed = await self.get_hp_embed()
