@@ -57,7 +57,9 @@ class HoneyPotSettingsView(discord.ui.View):
         enabled = await self.cog.db.get_honeypot_settings()["enabled"]
 
         self.enable_honeypot_button.label = "Enabled" if enabled else "Disabled"
-        self.enable_honeypot_button.style = discord.ButtonStyle.success if enabled else discord.ButtonStyle.danger
+        self.enable_honeypot_button.style = (
+            discord.ButtonStyle.success if enabled else discord.ButtonStyle.danger
+        )
 
         embed = await self.get_hp_embed()
         self.message = await self.interaction.response_or_followup(
@@ -78,9 +80,11 @@ class HoneyPotSettingsView(discord.ui.View):
     async def enable_honeypot_button(
         self,
         interaction: KeplerInteraction,
-        button: discord.ui.Button["HoneyPotSettingsView"]
+        button: discord.ui.Button["HoneyPotSettingsView"],
     ) -> None:
-        enabled = int(not await self.cog.db.get_honeypot_settings(interaction.guild.id)["enabled"])
+        enabled = int(
+            not await self.cog.db.get_honeypot_settings(interaction.guild.id)["enabled"]
+        )
 
         await self.cog.db.execute(
             """
@@ -92,7 +96,9 @@ class HoneyPotSettingsView(discord.ui.View):
         )
 
         button.label = "Enabled" if enabled else "Disabled"
-        button.style = discord.ButtonStyle.success if enabled else discord.ButtonStyle.danger
+        button.style = (
+            discord.ButtonStyle.success if enabled else discord.ButtonStyle.danger
+        )
 
         embed = await self.get_hp_embed()
         await interaction.response.edit_message(embed=embed, view=self)
