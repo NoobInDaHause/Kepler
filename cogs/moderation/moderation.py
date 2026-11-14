@@ -299,7 +299,7 @@ class Moderation(commands.GroupCog, group_name="moderation"):
                     if logchannel:
                         await logchannel.send(
                             content=f"Could not kick {message.author}! I may lack permission, or "
-                            "the members top role is higher or equal to mine"
+                            "the members top role is higher or equal to mine."
                         )
                     return
                 except discord.errors.HTTPException:
@@ -317,7 +317,7 @@ class Moderation(commands.GroupCog, group_name="moderation"):
                     if logchannel:
                         await logchannel.send(
                             content=f"Could not ban {message.author}! I may lack permission, or "
-                            "the members top role is higher or equal to mine"
+                            "the members top role is higher or equal to mine."
                         )
                     return
                 except discord.errors.HTTPException:
