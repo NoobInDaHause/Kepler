@@ -173,7 +173,7 @@ class HoneyPotSettingsView(discord.ui.View):
 
         try:
             channel = await commands.TextChannelConverter().convert(
-                await interaction.client.get_context(interaction), ans
+                await interaction.client.get_context(self.interaction), ans
             )
         except commands.BadArgument:
             await init_msg.edit(content="That does not seem to be a valid channel.")
