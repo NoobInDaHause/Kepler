@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 from typing import TYPE_CHECKING, List, Union
 
 import discord
+from discord.ext import commands
 
 from keplerbot import KeplerInteraction
 
@@ -111,7 +113,7 @@ class HoneyPotSettingsView(discord.ui.View):
         embed = await self.get_hp_embed()
         await interaction.response.edit_message(embed=embed, view=self)
 
-    @discord.ui.button(label="Set HoneyPot Channels", style=discord.ButtonStyle.grey)
+    @discord.ui.button(label="Set HoneyPot Channels", style=discord.ButtonStyle.blurple)
     async def sethoneypotchannels_button(
         self,
         interaction: KeplerInteraction,
@@ -147,6 +149,55 @@ class HoneyPotSettingsView(discord.ui.View):
 
         embed = await self.get_hp_embed()
         await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="Log Channel", style=discord.ButtonStyle.blurple)
+    async def logchannel_button(
+        self,
+        interaction: KeplerInteraction,
+        button: discord.ui.Button["HoneyPotSettingsView"],
+    ) -> None:
+        init_msg = await interaction.response_or_followup(
+            content="Please mention the channel or input channel id after this message. (pass 'none' to clear the log channel)"
+        )
+
+        try:
+            ans = await self.cog.bot.wait_for("message", check=lambda x: x.author.id == interaction.user.id, timeout=30.0)
+        except asyncio.TimeoutError:
+            await init_msg.edit(
+                content="You took too long to respond."
+            )
+            await init_msg.delete(delay=5.0)
+            return
+
+        try:
+            channel = await commands.TextChannelConverter().convert(
+                await interaction.client.get_context(interaction), ans
+            )
+        except commands.BadArgument:
+            await init_msg.edit(
+                content="That does not seem to be a valid channel."
+            )
+            await init_msg.delete(delay=5.0)
+            return
+
+        if not channel:
+            await init_msg.edit(
+                content="That does not seem to be a valid channel."
+            )
+            await init_msg.delete(delay=5.0)
+            return
+
+        await self.cog.db.execute(
+            """
+            INSERT INTO honeypot_settings (guild_id, logchannel_id)
+            VALUES (?, ?)
+            ON CONFLICT(guild_id) DO UPDATE SET logchannel_id = excluded.logchannel_id
+            """,
+            (interaction.guild.id, channel.id),
+        )
+
+        embed = await self.get_hp_embed()
+        await interaction.message.edit(embed=embed, view=self)
 
     async def interaction_check(self, interaction: KeplerInteraction) -> bool:
         if not self.interaction.user:
