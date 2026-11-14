@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-from typing import List, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, List, Union
 
 import discord
 
