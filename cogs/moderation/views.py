@@ -119,8 +119,81 @@ class HoneyPotSettingsView(discord.ui.View):
         interaction: KeplerInteraction,
         button: discord.ui.Button["HoneyPotSettingsView"],
     ) -> None:
-        # too lazy for now
-        await interaction.response.defer()
+        init_msg = await interaction.response_or_followup(
+            content="Please mention the channels or input channel ids separated by spaces after this message. "
+            "(pass 'none' to clear the honeypot channels)\n"
+            "Note: This will overwrite the current set honeypot channels."
+        )
+
+        try:
+            ans = await interaction.client.wait_for(
+                "message",
+                check=lambda x: x.author.id == interaction.user.id,
+                timeout=30.0,
+            )
+        except asyncio.TimeoutError:
+            await init_msg.edit(content="You took too long to respond.")
+            await init_msg.delete(delay=5.0)
+            return
+
+        if not ans.content:
+            await init_msg.edit(content="No valid text channels found.")
+            await init_msg.delete(delay=5.0)
+            await ans.delete()
+            return
+
+        if ans.content.lower() == "none":
+            await init_msg.delete()
+            await ans.delete()
+            await self.cog.db.execute(
+                """
+                INSERT INTO honeypot_settings (guild_id, channel_ids)
+                VALUES (?, ?)
+                ON CONFLICT(guild_id) DO UPDATE SET channel_ids = excluded.channel_ids
+                """,
+                (interaction.guild.id, None),
+            )
+            embed = await self.get_hp_embed()
+            await interaction.message.edit(embed=embed, view=self)
+            return
+
+        splitted = ans.content.split(" ")
+        valid_chans: List[discord.TextChannel] = []
+
+        for chan in splitted:
+            with contextlib.suppress(commands.BadArgument):
+                ch = await commands.TextChannelConverter().convert(
+                    await interaction.client.get_context(self.interaction), chan
+                )
+                if (
+                    not ch.permissions_for(interaction.guild.me).send_messages
+                    or not ch.permissions_for(interaction.guild.me).view_channel
+                ):
+                    continue
+
+                valid_chans.append(ch)
+
+        if not valid_chans:
+            await init_msg.edit(
+                content="No valid text channels found or I do not have proper permissions on inputted channels."
+            )
+            await init_msg.delete(delay=5.0)
+            await ans.delete()
+            return
+
+        await init_msg.delete()
+        await ans.delete()
+        await self.cog.db.execute(
+            """
+            INSERT INTO honeypot_settings (guild_id, channel_ids)
+            VALUES (?, ?)
+            ON CONFLICT(guild_id) DO UPDATE SET channel_ids = excluded.channel_ids
+            """,
+            (interaction.guild.id, ",".join(c.id for c in valid_chans)),
+        )
+
+        embed = await self.get_hp_embed()
+        await interaction.message.edit(embed=embed, view=self)
 
     @discord.ui.button(label="Action", style=discord.ButtonStyle.grey, emoji="👢")
     async def action_button(
@@ -161,7 +234,7 @@ class HoneyPotSettingsView(discord.ui.View):
         )
 
         try:
-            ans = await self.cog.bot.wait_for(
+            ans = await interaction.client.wait_for(
                 "message",
                 check=lambda x: x.author.id == interaction.user.id,
                 timeout=30.0,
@@ -169,6 +242,14 @@ class HoneyPotSettingsView(discord.ui.View):
         except asyncio.TimeoutError:
             await init_msg.edit(content="You took too long to respond.")
             await init_msg.delete(delay=5.0)
+            return
+
+        if not ans.content:
+            await init_msg.edit(
+                content="That does not seem to be a valid text channel."
+            )
+            await init_msg.delete(delay=5.0)
+            await ans.delete()
             return
 
         if ans.content.lower() == "none":
