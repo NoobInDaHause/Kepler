@@ -189,7 +189,7 @@ class HoneyPotSettingsView(discord.ui.View):
             VALUES (?, ?)
             ON CONFLICT(guild_id) DO UPDATE SET channel_ids = excluded.channel_ids
             """,
-            (interaction.guild.id, ",".join(c.id for c in valid_chans)),
+            (interaction.guild.id, ",".join(str(c.id) for c in valid_chans)),
         )
 
         embed = await self.get_hp_embed()
