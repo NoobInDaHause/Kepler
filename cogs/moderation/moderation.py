@@ -832,4 +832,4 @@ class Moderation(commands.GroupCog, group_name="moderation"):
         self,
         interaction: KeplerInteraction,
     ) -> None:
-        await HoneyPotSettingsView(interaction).start()
+        await HoneyPotSettingsView(self, interaction).start()

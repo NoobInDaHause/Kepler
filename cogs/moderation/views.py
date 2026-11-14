@@ -14,15 +14,14 @@ if TYPE_CHECKING:
 class HoneyPotSettingsView(discord.ui.View):
     children: List[Union[discord.ui.Button, discord.ui.Select]]
 
-    def __init__(self, interaction: KeplerInteraction) -> None:
+    def __init__(self, cog: Moderation, interaction: KeplerInteraction) -> None:
         super().__init__()
+        self.cog = cog
         self.interaction = interaction
         self.message: discord.Message = None
 
-    async def start(self) -> None:
-        cog: Moderation = self.interaction.client.get_cog("Moderation")
-
-        hs = await cog.db.get_honeypot_settings(self.interaction.guild.id)
+    async def get_hp_embed(self) -> discord.Embed:
+        hs = await self.cog.db.get_honeypot_settings(self.interaction.guild.id)
 
         desc = f"Enabled: {hs['enabled']}\n" "Honeypot Channels: "
 
@@ -39,17 +38,28 @@ class HoneyPotSettingsView(discord.ui.View):
         desc += f"Action: {hs['action']}\n"
 
         lcid = hs["logchannel_id"]
-        lc = self.interaction.guild.get_channel(lcid) if lcid else discord.utils.MISSING
-        desc += (
-            "Honeypot Log Channel: "
-            f"{'None' if lc == discord.utils.MISSING else lc.mention if lc else f'Unknown Channel (ID: {lcid})'}\n"
-        )
+        if lcid is None:
+            lc = "None"
+        elif r_lc := self.interaction.guild.get_channel(lcid):
+            lc = r_lc.mention
+        else:
+            lc = f"Unknown Channel (ID: {lcid})"
 
-        embed = discord.Embed(
-            title=f"{self.interaction.guild}'s auto ban settings.",
+        desc += f"Honeypot Log Channel: {lc}"
+
+        return discord.Embed(
+            title=f"{self.interaction.guild}'s HoneyPot settings.",
             description=desc,
             colour=self.interaction.client.colour,
         )
+
+    async def start(self) -> None:
+        enabled = await self.cog.db.get_honeypot_settings()["enabled"]
+
+        self.enable_honeypot_button.label = "Enabled" if enabled else "Disabled"
+        self.enable_honeypot_button.style = discord.ButtonStyle.success if enabled else discord.ButtonStyle.danger
+
+        embed = await self.get_hp_embed()
         self.message = await self.interaction.response_or_followup(
             embed=embed, view=self
         )
@@ -63,6 +73,29 @@ class HoneyPotSettingsView(discord.ui.View):
         await interaction.response.defer()
         self.stop()
         await self.on_timeout()
+
+    @discord.ui.button(label="Enabled", style=discord.ButtonStyle.success)
+    async def enable_honeypot_button(
+        self,
+        interaction: KeplerInteraction,
+        button: discord.ui.Button["HoneyPotSettingsView"]
+    ) -> None:
+        enabled = int(not await self.cog.db.get_honeypot_settings(interaction.guild.id)["enabled"])
+
+        await self.cog.db.execute(
+            """
+            INSERT INTO honeypot_settings (guild_id, enabled)
+            VALUES (?, ?)
+            ON CONFLICT(guild_id) DO UPDATE SET enabled = excluded.enabled
+            """,
+            (interaction.guild.id, enabled),
+        )
+
+        button.label = "Enabled" if enabled else "Disabled"
+        button.style = discord.ButtonStyle.success if enabled else discord.ButtonStyle.danger
+
+        embed = await self.get_hp_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
 
     async def interaction_check(self, interaction: KeplerInteraction) -> bool:
         if not self.interaction.user:

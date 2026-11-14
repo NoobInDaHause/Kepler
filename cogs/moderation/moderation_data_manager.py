@@ -50,8 +50,8 @@ class ModerationDataBase(DataManager):
             CREATE TABLE IF NOT EXISTS honeypot_settings (
                 guild_id INTEGER PRIMARY KEY NOT NULL,
                 enabled INTEGER NOT NULL DEFAULT 0,
-                channel_ids TEXT NOT NULL,
-                action TEXT NOT NULL DEFAULT 'kick',
+                channel_ids TEXT,
+                action TEXT DEFAULT 'kick',
                 logchannel_id INTEGER
             )
             """)
