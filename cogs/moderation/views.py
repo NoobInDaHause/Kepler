@@ -15,6 +15,7 @@ class HoneyPotSettingsView(discord.ui.View):
     children: List[Union[discord.ui.Button, discord.ui.Select]]
 
     def __init__(self, interaction: KeplerInteraction) -> None:
+        super().__init__()
         self.interaction = interaction
         self.message: discord.Message = None
 
