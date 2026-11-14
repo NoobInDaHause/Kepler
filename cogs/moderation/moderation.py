@@ -271,10 +271,12 @@ class Moderation(commands.GroupCog, group_name="moderation"):
 
     @commands.Cog.listener("on_message")
     async def honeypot_listener(self, message: discord.Message) -> None:
-        if not message.guild or message.author.bot:
+        if message.guild is None:
             return
         if (
             message.guild.owner.id == message.author.id
+            or message.author.bot
+            or await self.bot.is_owner(message.author)
             or message.author.guild_permissions.manage_guild
             or message.author.guild_permissions.administrator
         ):
@@ -293,6 +295,9 @@ class Moderation(commands.GroupCog, group_name="moderation"):
         match hs["action"]:
             case "kick":
                 try:
+                    await message.author.send(
+                        content=f"You have been kicked from {message.guild} for triggering HoneyPot."
+                    )
                     await message.author.kick(reason="Honeypot triggered.")
                     act = "kicked"
                 except discord.errors.Forbidden:
@@ -311,6 +316,9 @@ class Moderation(commands.GroupCog, group_name="moderation"):
                     return
             case "ban":
                 try:
+                    await message.author.send(
+                        content=f"You have been banned from {message.guild} for triggering HoneyPot."
+                    )
                     await message.author.ban(reason="Honeypot triggered.")
                     act = "banned"
                 except discord.errors.Forbidden:
