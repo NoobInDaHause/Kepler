@@ -303,9 +303,10 @@ class ModerationDataBase(DataManager):
                 "logchannel_id": None,
             }
 
+        c_ids = result[2].split(",") if result[2] else ""
         return {
             "enabled": bool(result[1]),
-            "channel_ids": [int(chan_id) for chan_id in result[2].split(",")],
+            "channel_ids": [int(chan_id) for chan_id in c_ids],
             "action": result[3],
             "logchannel_id": result[4],
         }
