@@ -49,8 +49,8 @@ class LevelingDataBase(DataManager):
                 "ADD COLUMN accumulate_level_roles INTEGER NOT NULL DEFAULT 0"
             )
 
-        if to_execute:
-            await self.execute("ALTER TABLE guilds " + ", ".join(to_execute))
+        for alter_statement in to_execute:
+            await self.execute(f"ALTER TABLE guilds {alter_statement}")
 
     async def get_guild_data(
         self, guild_id: int

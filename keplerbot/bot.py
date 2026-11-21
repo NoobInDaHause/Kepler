@@ -133,6 +133,7 @@ class Kepler(commands.AutoShardedBot):
                         folder_name,
                         exc_info=(type(e), e, e.__traceback__),
                     )
+                    continue
                 last_cog = list(self.cogs.keys())[-1]
                 if folder_name.lower() != last_cog.lower():
                     self.log.warning(
