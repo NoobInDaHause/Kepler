@@ -279,6 +279,7 @@ class Moderation(commands.GroupCog, group_name="moderation"):
             or await self.bot.is_owner(message.author)
             or message.author.guild_permissions.manage_guild
             or message.author.guild_permissions.administrator
+            or message.author.top_role >= message.guild.me.top_role
         ):
             return
 
@@ -295,10 +296,10 @@ class Moderation(commands.GroupCog, group_name="moderation"):
         match hs["action"]:
             case "kick":
                 try:
+                    await message.author.kick(reason="Honeypot triggered.")
                     await message.author.send(
                         content=f"You have been kicked from {message.guild} for triggering HoneyPot."
                     )
-                    await message.author.kick(reason="Honeypot triggered.")
                     act = "kicked"
                 except (discord.errors.Forbidden, discord.errors.HTTPException) as err:
                     if logchannel:
@@ -316,10 +317,10 @@ class Moderation(commands.GroupCog, group_name="moderation"):
                     return
             case "ban":
                 try:
+                    await message.author.ban(reason="Honeypot triggered.")
                     await message.author.send(
                         content=f"You have been banned from {message.guild} for triggering HoneyPot."
                     )
-                    await message.author.ban(reason="Honeypot triggered.")
                     act = "banned"
                 except (
                     discord.errors.Forbidden,
