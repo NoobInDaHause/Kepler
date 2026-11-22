@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import orjson
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
+
+import orjson
 
 from utilities.data_manager import DataManager
 
