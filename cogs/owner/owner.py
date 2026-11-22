@@ -208,6 +208,24 @@ class Owner(commands.Cog):
         cog_file = discord.File(BytesIO(markdown.encode("utf-8")), filename="cogs.md")
         await interaction.response_or_followup(file=cog_file)
 
+    async def console_logs(self, interaction: KeplerInteraction) -> None:
+        logs_path = Path(__file__).parents[2] / "logs.log"
+        if not logs_path.exists():
+            return await interaction.response_or_followup(content="No console logs found.")
+
+        logs = logs_path.read_text(encoding="utf-8", errors="replace").strip()
+        if not logs:
+            return await interaction.response_or_followup(content="The console log is empty.")
+
+        pages = [
+            f"```text\n{page}\n```" for page in pagify(logs, page_length=1900)
+        ]
+
+        if len(pages) == 1:
+            await interaction.response_or_followup(content=pages[0])
+        else:
+            await PaginatorView(interaction, pages).start()
+
     async def _colour(self, interaction: KeplerInteraction, colour: str):
         dc = discord.Colour.from_str(colour)
         self.bot.global_hex_colour = str(dc)
@@ -334,6 +352,9 @@ class Owner(commands.Cog):
             `Usage: command:reloadcog argument:<cog_names...>`
             > coglist: Shows the list of loaded/unloaded cogs.
             `Usage: command:coglist`
+            > console: Shows the console logs, with pagination when needed.
+            `Usage: command:console`
+            `Aliases: consolelog, logs`
             > **botcolour**: Change the bot global embed hex colour, leave argument blank to set it back to default.
             `Usage: command:botcolour argument:[hex_code=#276a8a]`
             `Aliases: botcolor`

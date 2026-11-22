@@ -83,6 +83,10 @@ class OwnerView(discord.ui.View):
                     await self.cog._cog_list(interaction)
                     return
 
+                if command in {"consolelogs", "consolelog"}:
+                    await self.cog.console_logs(interaction)
+                    return
+
                 if command in {"botcolour", "botcolor"}:
                     await self.cog._colour(interaction, argument or "#276a8a")
                     return
