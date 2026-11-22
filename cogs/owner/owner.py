@@ -223,10 +223,7 @@ class Owner(commands.Cog):
 
         pages = [f"```text\n{page}\n```" for page in pagify(logs, page_length=1900)]
 
-        if len(pages) == 1:
-            await interaction.response_or_followup(content=pages[0])
-        else:
-            await PaginatorView(interaction, pages).start()
+        await PaginatorView(interaction, pages).start()
 
     async def _colour(self, interaction: KeplerInteraction, colour: str):
         dc = discord.Colour.from_str(colour)

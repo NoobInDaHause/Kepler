@@ -17,12 +17,14 @@ class PaginatorView(discord.ui.View):
         interaction: KeplerInteraction,
         pages: List[Union[str, discord.Embed]],
         timeout: float = 30.0,
+        delete_message_when_closed: bool = False,
     ):
         super().__init__(timeout=timeout)
         self.interaction = interaction
         self.pages = pages
         self.message: Optional[Union[discord.Message, discord.WebhookMessage]] = None
         self.current_page = 0
+        self.delete_message_when_closed = delete_message_when_closed
         self.update_button_visibility()
         self.update_button_states()
 
@@ -106,7 +108,13 @@ class PaginatorView(discord.ui.View):
     ) -> None:
         await interaction.response.defer()
         self.stop()
-        await self.on_timeout()
+        if self.delete_message_when_closed:
+            with contextlib.suppress(
+                discord.errors.HTTPException, discord.errors.NotFound
+            ):
+                await interaction.message.delete()
+        else:
+            await self.on_timeout()
 
     @discord.ui.button(label="▶", style=discord.ButtonStyle.primary)
     async def next_page_button(
