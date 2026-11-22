@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import json
+import orjson
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -35,8 +35,8 @@ class Settings:
 
     @classmethod
     async def initialize(cls) -> Settings:
-        with open(PROJECT_ROOT / "config.json", "r", encoding="utf-8") as config_file:
-            data: dict = json.load(config_file)
+        with open(PROJECT_ROOT / "config.json", "rb") as config_file:
+            data: dict = orjson.loads(config_file.read())
             data.pop(
                 "__version__", None
             )  # versioning moved from config.json to version.txt in v0.0.3

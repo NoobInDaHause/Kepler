@@ -1,5 +1,5 @@
 import contextlib
-import json
+import orjson
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
@@ -300,14 +300,14 @@ class Kepler(commands.AutoShardedBot):
         return await super().close()
 
     def save_settings(self):
-        with open(PROJECT_ROOT / "config.json", "w", encoding="utf-8") as conf:
+        with open(PROJECT_ROOT / "config.json", "wb") as conf:
             data = {
                 "global_hex_colour": self.global_hex_colour,
                 "blacklisted_user_ids": self.blacklisted_user_ids,
                 "custom_info": self.custom_info,
                 "bot_status": self.bot_status,
             }
-            json.dump(data, conf, indent=4)
+            conf.write(orjson.dumps(data, option=orjson.OPT_INDENT_2))
             self.log.info("Settings successfully saved.")
 
     def log_that_log(self) -> None:
