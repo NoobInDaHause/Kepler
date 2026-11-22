@@ -295,8 +295,8 @@ class Kepler(commands.AutoShardedBot):
         self.log.info(
             "Cleaning up before %s.", ("restarting" if restart else "shutting down")
         )
-        self.save_settings()
         self.log_that_log()
+        self.save_settings()
         return await super().close()
 
     def save_settings(self):
@@ -314,10 +314,9 @@ class Kepler(commands.AutoShardedBot):
         logs_path = Path(__file__).parents[1]
         log_file = logs_path / "logs.log"
         history_path = logs_path / "log_history"
+        history_path.mkdir(parents=True, exist_ok=True)
 
         if log_file.exists():
-            history_path.mkdir(parents=True, exist_ok=True)
-
             timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d, %H-%M-%S")
             log_file.rename(history_path / f"{timestamp}.log")
             self.log.info("Successfully logged the log file.")
