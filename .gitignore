@@ -223,3 +223,4 @@ tests/
 # test cogs
 cogs/testcog
 cogs/testcog2
+cogs/timers

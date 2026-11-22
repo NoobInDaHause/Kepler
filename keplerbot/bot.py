@@ -296,6 +296,7 @@ class Kepler(commands.AutoShardedBot):
             "Cleaning up before %s.", ("restarting" if restart else "shutting down")
         )
         self.save_settings()
+        self.log_that_log()
         return await super().close()
 
     def save_settings(self):
@@ -308,3 +309,14 @@ class Kepler(commands.AutoShardedBot):
             }
             json.dump(data, conf, indent=4)
             self.log.info("Settings successfully saved.")
+
+    def log_that_log(self) -> None:
+        logs_path = Path(__file__).parents[1]
+        log_file = logs_path / "logs.log"
+        history_path = logs_path / "log_history"
+
+        if log_file.exists():
+            history_path.mkdir(parents=True, exist_ok=True)
+
+            timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d, %H-%M-%S")
+            log_file.rename(history_path / f"{timestamp}.log")
