@@ -320,3 +320,4 @@ class Kepler(commands.AutoShardedBot):
 
             timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d, %H-%M-%S")
             log_file.rename(history_path / f"{timestamp}.log")
+            self.log.info("Successfully logged the log file.")
