@@ -355,7 +355,7 @@ class Owner(commands.Cog):
             > coglist: Shows the list of loaded/unloaded cogs.
             `Usage: command:coglist`
             > consolelogs: Shows the console logs, with pagination when needed.
-            `Usage: command:console`
+            `Usage: command:consolelogs`
             `Aliases: consolelog`
             > **botcolour**: Change the bot global embed hex colour, leave argument blank to set it back to default.
             `Usage: command:botcolour argument:[hex_code=#276a8a]`
