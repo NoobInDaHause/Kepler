@@ -153,7 +153,10 @@ class OwnerView(discord.ui.View):
         commands = OWNER_COMMANDS[start : start + self.commands_per_page]
         lines = []
         for number, command in enumerate(commands, start=1):
-            line = f"**{number}. `{command.name}`:** {command.description}"
+            line = (
+                f"**{NUMBER_EMOJIS[number - 1]} `{command.name}`:** "
+                f"{command.description}"
+            )
             if command.usage:
                 line += f" Usage: `{command.usage}`"
             lines.append(line)
