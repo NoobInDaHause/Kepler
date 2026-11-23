@@ -174,27 +174,49 @@ class OwnerView(discord.ui.View):
             button.callback = callback
             self.add_item(button)
 
-        if self.page_count > 1:
-            previous = discord.ui.Button(
-                label="◀ Previous",
+        if self.page_count >= 3:
+            first = discord.ui.Button(
+                label="⏮",
                 style=discord.ButtonStyle.secondary,
                 row=2,
                 disabled=self.current_page == 0,
             )
-            next_page = discord.ui.Button(
-                label="Next ▶",
-                style=discord.ButtonStyle.secondary,
+            first.callback = self.first_page
+            self.add_item(first)
+
+        if self.page_count > 1:
+            previous = discord.ui.Button(
+                label="◀",
+                style=discord.ButtonStyle.primary,
                 row=2,
-                disabled=self.current_page == self.page_count - 1,
+                disabled=self.current_page == 0,
             )
             previous.callback = self.previous_page
-            next_page.callback = self.next_page
             self.add_item(previous)
-            self.add_item(next_page)
 
         close = discord.ui.Button(label="✖", style=discord.ButtonStyle.danger, row=2)
         close.callback = self.close
         self.add_item(close)
+
+        if self.page_count > 1:
+            next_page = discord.ui.Button(
+                label="▶",
+                style=discord.ButtonStyle.primary,
+                row=2,
+                disabled=self.current_page == self.page_count - 1,
+            )
+            next_page.callback = self.next_page
+            self.add_item(next_page)
+
+        if self.page_count >= 3:
+            last = discord.ui.Button(
+                label="⏭",
+                style=discord.ButtonStyle.secondary,
+                row=2,
+                disabled=self.current_page == self.page_count - 1,
+            )
+            last.callback = self.last_page
+            self.add_item(last)
 
     async def select_command(
         self, interaction: KeplerInteraction, command: OwnerCommand
@@ -207,8 +229,14 @@ class OwnerView(discord.ui.View):
     async def previous_page(self, interaction: KeplerInteraction) -> None:
         await self.update_page(interaction, self.current_page - 1)
 
+    async def first_page(self, interaction: KeplerInteraction) -> None:
+        await self.update_page(interaction, 0)
+
     async def next_page(self, interaction: KeplerInteraction) -> None:
         await self.update_page(interaction, self.current_page + 1)
+
+    async def last_page(self, interaction: KeplerInteraction) -> None:
+        await self.update_page(interaction, self.page_count - 1)
 
     async def update_page(self, interaction: KeplerInteraction, page: int) -> None:
         self.current_page = max(0, min(page, self.page_count - 1))
