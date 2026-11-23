@@ -1,7 +1,7 @@
 import contextlib
 from dataclasses import dataclass
 from math import ceil
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 import discord
 
@@ -12,13 +12,18 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
+class CommandArgument:
+    label: str
+    placeholder: str = ""
+    required: bool = False
+
+
+@dataclass(frozen=True)
 class OwnerCommand:
     name: str
     description: str
     usage: Optional[str] = None
-    argument_label: Optional[str] = None
-    argument_placeholder: str = ""
-    argument_required: bool = False
+    arguments: Tuple[CommandArgument, ...] = ()
 
 
 OWNER_COMMANDS = (
@@ -29,25 +34,19 @@ OWNER_COMMANDS = (
         "loadcog",
         "Loads one or more cogs.",
         "loadcog <cog_names...>",
-        "Cog names",
-        "Separate cog names with spaces",
-        True,
+        (CommandArgument("Cog names", "Separate cog names with spaces", True),),
     ),
     OwnerCommand(
         "unloadcog",
         "Unloads one or more cogs.",
         "unloadcog <cog_names...>",
-        "Cog names",
-        "Separate cog names with spaces",
-        True,
+        (CommandArgument("Cog names", "Separate cog names with spaces", True),),
     ),
     OwnerCommand(
         "reloadcog",
         "Reloads one or more cogs.",
         "reloadcog <cog_names...>",
-        "Cog names",
-        "Separate cog names with spaces",
-        True,
+        (CommandArgument("Cog names", "Separate cog names with spaces", True),),
     ),
     OwnerCommand("coglist", "Shows the list of loaded and unloaded cogs."),
     OwnerCommand(
@@ -58,37 +57,51 @@ OWNER_COMMANDS = (
         "botcolour",
         "Changes the bot's embed colour. Leave blank to reset to the default.",
         "botcolour [hex_code=#276a8a]",
-        "Hex colour (optional)",
-        "For example: #276a8a",
+        (CommandArgument("Hex colour (optional)", "For example: #276a8a"),),
     ),
     OwnerCommand(
         "blacklist",
         "Blacklists users, or shows the list when left blank.",
         "blacklist [users...]",
-        "Users (optional)",
-        "User IDs, mentions, or names separated by spaces",
+        (
+            CommandArgument(
+                "Users (optional)",
+                "User IDs, mentions, or names separated by spaces",
+            ),
+        ),
     ),
     OwnerCommand(
         "unblacklist",
         "Unblacklists users, or shows the list when left blank.",
         "unblacklist [users...]",
-        "Users (optional)",
-        "User IDs, mentions, or names separated by spaces",
+        (
+            CommandArgument(
+                "Users (optional)",
+                "User IDs, mentions, or names separated by spaces",
+            ),
+        ),
     ),
     OwnerCommand(
         "custominfo",
         "Sets custom info for /botinfo. Leave blank to remove it.",
         "custominfo [new_info]",
-        "Custom info (optional)",
-        "Leave blank to remove custom info",
+        (
+            CommandArgument(
+                "Custom info (optional)", "Leave blank to remove custom info"
+            ),
+        ),
     ),
     OwnerCommand(
         "botstatus",
         "Changes the bot's status.",
         "botstatus <status>,<activity_type>,<status_name>",
-        "Status, activity, and name",
-        "For example: online,playing,Kepler",
-        True,
+        (
+            CommandArgument("Status", "online, idle, dnd, or offline", True),
+            CommandArgument(
+                "Activity type", "playing, listening, watching, or competing", True
+            ),
+            CommandArgument("Status name", "For example: Kepler", True),
+        ),
     ),
 )
 
@@ -111,19 +124,24 @@ class CommandModal(discord.ui.Modal):
         super().__init__(title=f"{command.name.title()} arguments", timeout=60.0)
         self.owner_view = owner_view
         self.command = command
-        self.argument = discord.ui.TextInput(
-            label=command.argument_label or "Argument",
-            style=discord.TextStyle.long,
-            required=command.argument_required,
-            placeholder=command.argument_placeholder or None,
-            max_length=4000,
-        )
-        self.add_item(self.argument)
+        self.argument_inputs: List[discord.ui.TextInput] = []
+        for argument in command.arguments:
+            text_input = discord.ui.TextInput(
+                label=argument.label,
+                style=discord.TextStyle.long,
+                required=argument.required,
+                placeholder=argument.placeholder or None,
+                max_length=4000,
+            )
+            self.argument_inputs.append(text_input)
+            self.add_item(text_input)
 
     async def on_submit(self, interaction: KeplerInteraction) -> None:
         await interaction.response.defer()
         await self.owner_view.execute_command(
-            interaction, self.command, self.argument.value
+            interaction,
+            self.command,
+            ",".join(text_input.value for text_input in self.argument_inputs),
         )
 
 
@@ -237,7 +255,7 @@ class OwnerView(discord.ui.View):
     async def select_command(
         self, interaction: KeplerInteraction, command: OwnerCommand
     ) -> None:
-        if command.argument_label:
+        if command.arguments:
             await interaction.response.send_modal(CommandModal(self, command))
             return
         await self.execute_command(interaction, command, "")
