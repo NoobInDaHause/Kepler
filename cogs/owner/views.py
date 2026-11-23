@@ -92,6 +92,19 @@ OWNER_COMMANDS = (
     ),
 )
 
+NUMBER_EMOJIS = (
+    "1️⃣",
+    "2️⃣",
+    "3️⃣",
+    "4️⃣",
+    "5️⃣",
+    "6️⃣",
+    "7️⃣",
+    "8️⃣",
+    "9️⃣",
+    "🔟",
+)
+
 
 class CommandModal(discord.ui.Modal):
     def __init__(self, owner_view: "OwnerView", command: OwnerCommand):
@@ -160,8 +173,8 @@ class OwnerView(discord.ui.View):
 
         for index, command in enumerate(commands):
             button = discord.ui.Button(
-                label=str(index + 1),
-                style=discord.ButtonStyle.primary,
+                emoji=NUMBER_EMOJIS[index],
+                style=discord.ButtonStyle.grey,
                 row=index // 5,
             )
 
