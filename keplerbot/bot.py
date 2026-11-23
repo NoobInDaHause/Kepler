@@ -156,22 +156,24 @@ class Kepler(commands.AutoShardedBot):
         act, desc = self.bot_status["activity"], self.bot_status["description"]
         stat = self.bot_status["status"]
 
-        activity = discord.Activity(
-            type=(
-                discord.ActivityType.playing
-                if act == "playing"
-                else (
-                    discord.ActivityType.listening
-                    if act == "listening"
+        activity = None
+        if act and desc:
+            activity = discord.Activity(
+                type=(
+                    discord.ActivityType.playing
+                    if act == "playing"
                     else (
-                        discord.ActivityType.watching
-                        if act == "watching"
-                        else discord.ActivityType.competing
+                        discord.ActivityType.listening
+                        if act == "listening"
+                        else (
+                            discord.ActivityType.watching
+                            if act == "watching"
+                            else discord.ActivityType.competing
+                        )
                     )
-                )
-            ),
-            name=desc,
-        )
+                ),
+                name=desc,
+            )
 
         status = (
             discord.Status.online

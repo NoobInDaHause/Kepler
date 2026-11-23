@@ -4,7 +4,7 @@
     "custom_info": null,
     "bot_status": {
         "status": "online",
-        "activity": "playing",
-        "description": "Powered by Kepler"
+        "activity": null,
+        "description": null
     } 
 }

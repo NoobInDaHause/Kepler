@@ -296,30 +296,59 @@ class Owner(commands.Cog):
         await interaction.response_or_followup(embed=embed)
 
     async def update_bot_status(self, interaction: KeplerInteraction, argument: str):
-        splitted = argument.split(",", 3)
+        splitted = argument.split(",", 2)
 
         if len(splitted) < 3:
             return await interaction.response_or_followup(
-                content="Invalid argument. Usage: command:botstatus argument:<status>,<activity_type>,<status_name>"
+                content=(
+                    "Invalid argument. Use botstatus <status>[,<activity_type>,"
+                    "<status_name>]; leave both activity fields blank to keep the "
+                    "current activity, or enter none to clear it."
+                )
             )
 
         status = ["online", "idle", "dnd", "offline"]
         activity = ["playing", "listening", "watching", "competing"]
+        bot_status_value, activity_value, description = (
+            value.strip() for value in splitted
+        )
 
-        bot_status = {
-            "status": splitted[0],
-            "activity": splitted[1],
-            "description": splitted[2],
-        }
-
-        if bot_status["status"] not in status:
+        if bot_status_value not in status:
             return await interaction.response_or_followup(
                 content=f"Invalid status. Should only be {discord.utils._human_join(status)}."
             )
-        if bot_status["activity"] not in activity:
+
+        if activity_value.casefold() == "none":
+            if description:
+                return await interaction.response_or_followup(
+                    content="Leave the status name blank when clearing the activity."
+                )
+            bot_status = {
+                **self.bot.bot_status,
+                "status": bot_status_value,
+                "activity": None,
+                "description": None,
+            }
+        elif not activity_value:
+            if description:
+                return await interaction.response_or_followup(
+                    content="Enter an activity type, or leave both activity fields blank."
+                )
+            bot_status = {**self.bot.bot_status, "status": bot_status_value}
+        elif activity_value not in activity:
             return await interaction.response_or_followup(
                 content=f"Invalid activity. Should only be {discord.utils._human_join(activity)}"
             )
+        elif not description:
+            return await interaction.response_or_followup(
+                content="A status name is required when setting an activity."
+            )
+        else:
+            bot_status = {
+                "status": bot_status_value,
+                "activity": activity_value,
+                "description": description,
+            }
 
         self.bot.bot_status = bot_status
         await self.bot.setup_status()

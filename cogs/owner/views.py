@@ -93,14 +93,15 @@ OWNER_COMMANDS = (
     ),
     OwnerCommand(
         "botstatus",
-        "Changes the bot's status.",
-        "botstatus <status>,<activity_type>,<status_name>",
+        "Changes the bot's status and optionally its activity.",
+        "botstatus <status>[,<activity_type>,<status_name>]",
         (
             CommandArgument("Status", "online, idle, dnd, or offline", True),
             CommandArgument(
-                "Activity type", "playing, listening, watching, or competing", True
+                "Activity type (optional)",
+                "playing/listening/watching/competing; blank keeps, none clears",
             ),
-            CommandArgument("Status name", "For example: Kepler", True),
+            CommandArgument("Status name (optional)", "Required when activity is set"),
         ),
     ),
 )
