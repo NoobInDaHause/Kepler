@@ -192,9 +192,7 @@ class OwnerView(discord.ui.View):
             self.add_item(previous)
             self.add_item(next_page)
 
-        close = discord.ui.Button(
-            label="✖", style=discord.ButtonStyle.danger, row=2
-        )
+        close = discord.ui.Button(label="✖", style=discord.ButtonStyle.danger, row=2)
         close.callback = self.close
         self.add_item(close)
 
@@ -212,9 +210,7 @@ class OwnerView(discord.ui.View):
     async def next_page(self, interaction: KeplerInteraction) -> None:
         await self.update_page(interaction, self.current_page + 1)
 
-    async def update_page(
-        self, interaction: KeplerInteraction, page: int
-    ) -> None:
+    async def update_page(self, interaction: KeplerInteraction, page: int) -> None:
         self.current_page = max(0, min(page, self.page_count - 1))
         self._build_items()
         await interaction.response.edit_message(embed=self.build_embed(), view=self)
