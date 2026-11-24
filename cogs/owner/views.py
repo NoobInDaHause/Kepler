@@ -22,7 +22,6 @@ class CommandArgument:
 class OwnerCommand:
     name: str
     description: str
-    usage: Optional[str] = None
     arguments: Tuple[CommandArgument, ...] = ()
 
 
@@ -33,19 +32,16 @@ OWNER_COMMANDS = (
     OwnerCommand(
         "loadcog",
         "Loads one or more cogs.",
-        "loadcog <cog_names...>",
         (CommandArgument("Cog names", "Separate cog names with spaces", True),),
     ),
     OwnerCommand(
         "unloadcog",
         "Unloads one or more cogs.",
-        "unloadcog <cog_names...>",
         (CommandArgument("Cog names", "Separate cog names with spaces", True),),
     ),
     OwnerCommand(
         "reloadcog",
         "Reloads one or more cogs.",
-        "reloadcog <cog_names...>",
         (CommandArgument("Cog names", "Separate cog names with spaces", True),),
     ),
     OwnerCommand("coglist", "Shows the list of loaded and unloaded cogs."),
@@ -56,13 +52,11 @@ OWNER_COMMANDS = (
     OwnerCommand(
         "botcolour",
         "Changes the bot's embed colour. Leave blank to reset to the default.",
-        "botcolour [hex_code=#276a8a]",
         (CommandArgument("Hex colour (optional)", "For example: #276a8a"),),
     ),
     OwnerCommand(
         "blacklist",
         "Blacklists users, or shows the list when left blank.",
-        "blacklist [users...]",
         (
             CommandArgument(
                 "Users (optional)",
@@ -73,7 +67,6 @@ OWNER_COMMANDS = (
     OwnerCommand(
         "unblacklist",
         "Unblacklists users, or shows the list when left blank.",
-        "unblacklist [users...]",
         (
             CommandArgument(
                 "Users (optional)",
@@ -84,7 +77,6 @@ OWNER_COMMANDS = (
     OwnerCommand(
         "custominfo",
         "Sets custom info for /botinfo. Leave blank to remove it.",
-        "custominfo [new_info]",
         (
             CommandArgument(
                 "Custom info (optional)", "Leave blank to remove custom info"
@@ -94,7 +86,6 @@ OWNER_COMMANDS = (
     OwnerCommand(
         "botstatus",
         "Changes the bot's status and optionally its activity.",
-        "botstatus <status>[,<activity_type>,<status_name>]",
         (
             CommandArgument("Status", "online, idle, dnd, or offline", True),
             CommandArgument(
@@ -170,15 +161,10 @@ class OwnerView(discord.ui.View):
     def build_embed(self) -> discord.Embed:
         start = self.current_page * self.commands_per_page
         commands = OWNER_COMMANDS[start : start + self.commands_per_page]
-        lines = []
-        for number, command in enumerate(commands, start=1):
-            line = (
-                f"**{NUMBER_EMOJIS[number - 1]} `{command.name}`:** "
-                f"{command.description}"
-            )
-            if command.usage:
-                line += f" Usage: `{command.usage}`"
-            lines.append(line)
+        lines = [
+            f"**{NUMBER_EMOJIS[number - 1]} `{command.name}`:** {command.description}"
+            for number, command in enumerate(commands, start=1)
+        ]
 
         return discord.Embed(
             title="Owner commands",
