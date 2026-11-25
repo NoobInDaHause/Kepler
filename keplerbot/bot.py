@@ -40,7 +40,7 @@ class Kepler(commands.AutoShardedBot):
         self.global_hex_colour = settings.global_hex_colour
         self.custom_info = settings.custom_info
         self.bot_status = settings.bot_status
-        self.disabled_cogs = settings.disabled_cogs
+        self.unloaded_cogs = settings.unloaded_cogs
         self.log = logging.getLogger("Kepler")
         self.exit_code = 0
 
@@ -123,37 +123,60 @@ class Kepler(commands.AutoShardedBot):
 
     async def setup_load_cogs(self):
         cogs_path = Path(__file__).parents[1] / "cogs"
-        for cog_folder in cogs_path.iterdir():
-            if cog_folder.is_dir() and (cog_folder / "__init__.py").is_file():
-                folder_name = cog_folder.name
-                if folder_name.casefold() in self.disabled_cogs:
-                    self.log.info("Skipping disabled cog: %s", folder_name)
-                    continue
-                try:
-                    await self.load_extension(f"cogs.{folder_name}")
-                except commands.ExtensionFailed as e:
-                    self.log.exception(
-                        "Error loading cog: %s",
-                        folder_name,
-                        exc_info=(type(e), e, e.__traceback__),
-                    )
-                    continue
-                last_cog = list(self.cogs.keys())[-1]
-                if folder_name.lower() != last_cog.lower():
-                    self.log.warning(
-                        "Cog class name must match folder name case sensitivity does not matter for the folder name. "
-                        "Expected: %s, Got: %s",
-                        folder_name,
-                        last_cog,
-                    )
-                    await self.unload_extension(f"cogs.{folder_name}")
+        cog_folders = [
+            cog_folder
+            for cog_folder in cogs_path.iterdir()
+            if cog_folder.is_dir() and (cog_folder / "__init__.py").is_file()
+        ]
+        existing_cogs = {cog_folder.name.casefold() for cog_folder in cog_folders}
+        if stale_cogs := [
+            cog for cog in self.unloaded_cogs if cog.casefold() not in existing_cogs
+        ]:
+            self.unloaded_cogs = [
+                cog for cog in self.unloaded_cogs if cog.casefold() in existing_cogs
+            ]
+            self.log.info(
+                "Removing unloaded cog%s no longer present: %s",
+                "s" if len(stale_cogs) > 1 else "",
+                discord.utils._human_join(stale_cogs, final="and"),
+            )
+            self.save_settings()
+
+        unloaded_cogs = {cog.casefold() for cog in self.unloaded_cogs}
+        for cog_folder in cog_folders:
+            folder_name = cog_folder.name
+            if folder_name.casefold() in unloaded_cogs:
+                continue
+            try:
+                await self.load_extension(f"cogs.{folder_name}")
+            except commands.ExtensionFailed as e:
+                self.log.exception(
+                    "Error loading cog: %s",
+                    folder_name,
+                    exc_info=(type(e), e, e.__traceback__),
+                )
+                continue
+            last_cog = list(self.cogs.keys())[-1]
+            if folder_name.lower() != last_cog.lower():
+                self.log.warning(
+                    "Cog class name must match folder name case sensitivity does not matter for the folder name. "
+                    "Expected: %s, Got: %s",
+                    folder_name,
+                    last_cog,
+                )
+                await self.unload_extension(f"cogs.{folder_name}")
 
         if cog_names := list(self.cogs):
-            plural = "s" if len(cog_names) > 1 else ""
             self.log.info(
                 "Loaded cog%s: %s",
-                plural,
+                "s" if len(cog_names) > 1 else "",
                 discord.utils._human_join(cog_names, final="and"),
+            )
+        if self.unloaded_cogs:
+            self.log.info(
+                "Cog%s not loaded: %s",
+                "s" if len(self.unloaded_cogs) > 1 else "",
+                discord.utils._human_join(self.unloaded_cogs, final="and"),
             )
 
     async def setup_status(self):
@@ -312,7 +335,7 @@ class Kepler(commands.AutoShardedBot):
                 "blacklisted_user_ids": self.blacklisted_user_ids,
                 "custom_info": self.custom_info,
                 "bot_status": self.bot_status,
-                "disabled_cogs": self.disabled_cogs,
+                "unloaded_cogs": self.unloaded_cogs,
             }
             conf.write(orjson.dumps(data, option=orjson.OPT_INDENT_2))
             self.log.info("Settings successfully saved.")

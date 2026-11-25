@@ -7,5 +7,5 @@
         "activity": null,
         "description": null
     },
-    "disabled_cogs": []
+    "unloaded_cogs": []
 }

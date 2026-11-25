@@ -77,66 +77,84 @@ class Owner(commands.Cog):
 
         return True, ""
 
+    async def _update_unloaded_cogs(self, action: str, cog_name: str) -> None:
+        if action == "unload":
+            if cog_name.casefold() not in self.bot.unloaded_cogs:
+                self.bot.unloaded_cogs.append(cog_name)
+        elif action == "load":
+            self.bot.unloaded_cogs = [
+                cog
+                for cog in self.bot.unloaded_cogs
+                if cog.casefold() != cog_name.casefold()
+            ]
+        else:
+            return
+
+        self.bot.save_settings()
+
+    async def _process_cog(
+        self, action: str, cog_name: str
+    ) -> Tuple[str, object]:
+        if cog_name.casefold() == "owner":
+            return "protected", cog_name
+
+        if not self.cog_exists(cog_name):
+            return "missing", cog_name
+
+        succeeded, reason = await self.manage_cog(action, cog_name)
+        if not succeeded:
+            return "failed", (cog_name, reason)
+
+        await self._update_unloaded_cogs(action, cog_name)
+        return "successful", cog_name
+
+    @staticmethod
+    def _cog_manage_messages(
+        action: str,
+        successful: List[str],
+        failed: List[Tuple[str, str]],
+        missing: List[str],
+        protected: List[str],
+    ) -> List[str]:
+        messages = []
+        verb = f"{action}ed"
+
+        if successful:
+            label = "cog" if len(successful) == 1 else "cogs"
+            names = discord.utils._human_join(successful, final="and")
+            messages.append(f"{verb.capitalize()} {label}: {names}")
+
+        if failed:
+            label = "cog" if len(failed) == 1 else "cogs"
+            details = discord.utils._human_join(
+                [f"{name} ({reason})" for name, reason in failed],
+                final="and",
+            )
+            messages.append(f"The following {label} failed to {action}: {details}")
+
+        if missing:
+            label = "cog" if len(missing) == 1 else "cogs"
+            existence = "does not exist" if len(missing) == 1 else "do not exist"
+            names = discord.utils._human_join(missing, final="and")
+            messages.append(f"The following {label} {existence}: {names}")
+
+        if protected:
+            label = "cog" if len(protected) == 1 else "cogs"
+            names = discord.utils._human_join(protected, final="and")
+            messages.append(f"The following {label} cannot be {verb}: {names}")
+
+        return messages
+
     async def manage_cogs(
         self, interaction: KeplerInteraction, action: str, cog_names: List[str]
     ) -> None:
-        protected = []
-        missing = []
-        successful = []
-        failed = []
+        results = {"successful": [], "failed": [], "missing": [], "protected": []}
 
         for cog_name in cog_names:
-            if cog_name.casefold() == "owner":
-                protected.append(cog_name)
-                continue
+            result, value = await self._process_cog(action, cog_name)
+            results[result].append(value)
 
-            if not self.cog_exists(cog_name):
-                missing.append(cog_name)
-                continue
-
-            succeeded, reason = await self.manage_cog(action, cog_name)
-            if succeeded:
-                successful.append(cog_name)
-                if action == "unload":
-                    if cog_name.casefold() not in self.bot.disabled_cogs:
-                        self.bot.disabled_cogs.append(cog_name)
-                    self.bot.save_settings()
-                elif action == "load":
-                    self.bot.disabled_cogs = [
-                        cog
-                        for cog in self.bot.disabled_cogs
-                        if cog.casefold() != cog_name.casefold()
-                    ]
-                    self.bot.save_settings()
-            else:
-                failed.append((cog_name, reason))
-
-        messages = []
-        verb = f"{action}ed"
-        if successful:
-            cog_label = "cog" if len(successful) == 1 else "cogs"
-            messages.append(
-                f"{verb.capitalize()} {cog_label}: {discord.utils._human_join(successful, final='and')}"
-            )
-        if failed:
-            cog_label = "cog" if len(failed) == 1 else "cogs"
-            failed_details = discord.utils._human_join(
-                [f"{cog_name} ({reason})" for cog_name, reason in failed], final="and"
-            )
-            messages.append(
-                f"The following {cog_label} failed to {action}: {failed_details}"
-            )
-        if missing:
-            cog_label = "cog" if len(missing) == 1 else "cogs"
-            exist_verb = "does not exist" if len(missing) == 1 else "do not exist"
-            messages.append(
-                f"The following {cog_label} {exist_verb}: {discord.utils._human_join(missing, final='and')}"
-            )
-        if protected:
-            cog_label = "cog" if len(protected) == 1 else "cogs"
-            messages.append(
-                f"The following {cog_label} cannot be {verb}: {discord.utils._human_join(protected, final='and')}"
-            )
+        messages = self._cog_manage_messages(action, **results)
         await interaction.response_or_followup(content="\n".join(messages))
 
     async def restart_or_shutdown(
