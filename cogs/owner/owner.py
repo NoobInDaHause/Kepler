@@ -92,9 +92,7 @@ class Owner(commands.Cog):
 
         self.bot.save_settings()
 
-    async def _process_cog(
-        self, action: str, cog_name: str
-    ) -> Tuple[str, object]:
+    async def _process_cog(self, action: str, cog_name: str) -> Tuple[str, object]:
         if cog_name.casefold() == "owner":
             return "protected", cog_name
 
