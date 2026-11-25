@@ -19,6 +19,7 @@ class Settings:
     blacklisted_user_ids: List[int]
     custom_info: Optional[str]
     bot_status: Dict[str]
+    disabled_cogs: List[str]
 
     # migrate from sqlite to json v0.5.0 -> v1.0.0
     @staticmethod
@@ -54,5 +55,6 @@ class Settings:
                     "description": "Powered by Kepler",
                 },
             )
+            data.setdefault("disabled_cogs", [])  # new in version 1.5.0
 
         return cls(**data)

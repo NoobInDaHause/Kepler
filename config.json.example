@@ -6,5 +6,6 @@
         "status": "online",
         "activity": null,
         "description": null
-    } 
+    },
+    "disabled_cogs": []
 }

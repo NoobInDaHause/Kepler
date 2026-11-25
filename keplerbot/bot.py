@@ -40,6 +40,7 @@ class Kepler(commands.AutoShardedBot):
         self.global_hex_colour = settings.global_hex_colour
         self.custom_info = settings.custom_info
         self.bot_status = settings.bot_status
+        self.disabled_cogs = settings.disabled_cogs
         self.log = logging.getLogger("Kepler")
         self.exit_code = 0
 
@@ -125,6 +126,9 @@ class Kepler(commands.AutoShardedBot):
         for cog_folder in cogs_path.iterdir():
             if cog_folder.is_dir() and (cog_folder / "__init__.py").is_file():
                 folder_name = cog_folder.name
+                if folder_name.casefold() in self.disabled_cogs:
+                    self.log.info("Skipping disabled cog: %s", folder_name)
+                    continue
                 try:
                     await self.load_extension(f"cogs.{folder_name}")
                 except commands.ExtensionFailed as e:
@@ -308,6 +312,7 @@ class Kepler(commands.AutoShardedBot):
                 "blacklisted_user_ids": self.blacklisted_user_ids,
                 "custom_info": self.custom_info,
                 "bot_status": self.bot_status,
+                "disabled_cogs": self.disabled_cogs,
             }
             conf.write(orjson.dumps(data, option=orjson.OPT_INDENT_2))
             self.log.info("Settings successfully saved.")

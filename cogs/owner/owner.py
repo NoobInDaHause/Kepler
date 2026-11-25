@@ -97,6 +97,17 @@ class Owner(commands.Cog):
             succeeded, reason = await self.manage_cog(action, cog_name)
             if succeeded:
                 successful.append(cog_name)
+                if action == "unload":
+                    if cog_name.casefold() not in self.bot.disabled_cogs:
+                        self.bot.disabled_cogs.append(cog_name)
+                    self.bot.save_settings()
+                elif action == "load":
+                    self.bot.disabled_cogs = [
+                        cog
+                        for cog in self.bot.disabled_cogs
+                        if cog.casefold() != cog_name.casefold()
+                    ]
+                    self.bot.save_settings()
             else:
                 failed.append((cog_name, reason))
 
