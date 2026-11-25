@@ -51,8 +51,8 @@ class Settings:
                 "bot_status",
                 {
                     "status": "online",
-                    "activity": "playing",
-                    "description": "Powered by Kepler",
+                    "activity": None,
+                    "description": None,
                 },
             )
             data.setdefault("unloaded_cogs", [])  # new in version 1.5.0
