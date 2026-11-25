@@ -174,7 +174,7 @@ class Kepler(commands.AutoShardedBot):
             )
         if self.unloaded_cogs:
             self.log.info(
-                "Cog%s not loaded: %s",
+                "Unloaded cog%s: %s",
                 "s" if len(self.unloaded_cogs) > 1 else "",
                 discord.utils._human_join(self.unloaded_cogs, final="and"),
             )
