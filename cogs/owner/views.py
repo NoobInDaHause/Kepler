@@ -330,7 +330,7 @@ class OwnerView(discord.ui.View):
             await interaction.response_or_followup(content=str(error))
 
     async def interaction_check(self, interaction: KeplerInteraction) -> bool:
-        if not self.interaction.user:
+        if not self.interaction.user or not interaction.user:
             await interaction.response_or_followup(
                 content="Hmmm no interaction user found... This interaction is now timed out.",
                 ephemeral=True,
@@ -340,11 +340,12 @@ class OwnerView(discord.ui.View):
             return False
 
         is_owner = await interaction.client.is_owner(interaction.user)
+
         if not is_owner:
             await interaction.response_or_followup(
                 content="You are not an owner of this bot. 🖕🖕🖕", ephemeral=True
             )
-            return is_owner
+
         return is_owner
 
     async def on_timeout(self) -> None:
