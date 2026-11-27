@@ -20,7 +20,9 @@ class VerificationView(discord.ui.View):
             description="test",
             colour=self.interaction.client.colour,
         )
-        self.message = await self.interaction.response_or_followup(embed=embed, view=self)
+        self.message = await self.interaction.response_or_followup(
+            embed=embed, view=self
+        )
 
     @discord.ui.button(emoji="✖", style=discord.ButtonStyle.danger)
     async def close_button(
