@@ -22,4 +22,4 @@ class GuildTools(commands.GroupCog):
     @app_commands.command(name="verification", description="Verification for guild.")
     @has_permissions(manage_guild=True)
     async def guildtools_verification(self, interaction: KeplerInteraction) -> None:
-        await VerificationView(interaction).start()
+        await VerificationView().start(interaction)
