@@ -1,8 +1,7 @@
 import logging
 
-import discord
-from discord.ext import commands
 from discord import app_commands
+from discord.ext import commands
 
 from keplerbot import Kepler, KeplerInteraction
 from utilities.checks import has_permissions
@@ -14,6 +13,7 @@ class GuildTools(commands.GroupCog):
     """
     Various tools for guilds.
     """
+
     def __init__(self, bot: Kepler):
         super().__init__()
         self.bot = bot

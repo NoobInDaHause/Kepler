@@ -1,9 +1,9 @@
+import contextlib
+from typing import List, Self
+
 import discord
 
 from keplerbot import KeplerInteraction
-
-from typing import List, Self
-import contextlib
 
 
 class VerificationView(discord.ui.View):
@@ -17,11 +17,9 @@ class VerificationView(discord.ui.View):
         embed = discord.Embed(
             title=f"Verification settings for {interaction.guild}",
             description="test",
-            colour=interaction.client.colour
+            colour=interaction.client.colour,
         )
-        self.message = await interaction.response_or_followup(
-            embed=embed
-        )
+        self.message = await interaction.response_or_followup(embed=embed)
 
     @discord.ui.button(emoji="✖", style=discord.ButtonStyle.danger)
     async def close_button(
