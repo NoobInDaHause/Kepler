@@ -312,7 +312,7 @@ class HoneyPotSettingsView(discord.ui.View):
         await interaction.message.edit(embed=embed, view=self)
 
     async def interaction_check(self, interaction: KeplerInteraction) -> bool:
-        if not self.interaction.user:
+        if not self.interaction.user or not interaction.user:
             await interaction.response_or_followup(
                 content="Hmmm no interaction user found... This interaction is now timed out.",
                 ephemeral=True,
